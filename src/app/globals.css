@@ -1,0 +1,28 @@
+@import "tailwindcss";
+
+/* Tokens do design (tema escuro, uma cor primária). */
+@theme {
+  --font-sans: "Mona Sans Variable", ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --color-bg: #0e0f12;
+  --color-surface: #16171c;
+  --color-field: #0f1014;
+  --color-line: #22242b;
+  --color-line-strong: #2a2c34;
+  --color-text: #f3f4f6;
+  --color-text-2: #b4b7c1;
+  --color-muted: #8e919c;
+  --color-primary: #ff7a3d;
+  --color-primary-text: #ff8e5c;
+  --color-on-primary: #1a0c04;
+}
+
+html {
+  color-scheme: dark;
+}
+
+body {
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-family: var(--font-sans);
+  font-variant-numeric: tabular-nums;
+}
