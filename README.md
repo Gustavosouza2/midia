@@ -1,34 +1,106 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Cantina da Mídia
 
-## Getting Started
+App de vendas da cantina da equipe de mídia da Igreja Casa do Pai. É uma PWA offline-first:
+abre e funciona sem internet depois da primeira visita.
 
-First, run the development server:
+> Estado atual: configuração inicial. As telas de venda e a sincronização ainda não existem.
+
+## Requisitos
+
+- Node.js 22 ou mais novo
+- npm
+
+## Rodar localmente
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
+cp .env.example .env.local   # preencha DATABASE_URL e CODIGO_ACESSO_EQUIPE
+npm run dev                  # http://localhost:3000
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+O service worker só é gerado no build de produção. Para testar o modo offline no navegador:
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+npm run build && npm run start
+```
 
-## Learn More
+## Variáveis de ambiente
 
-To learn more about Next.js, take a look at the following resources:
+| Variável | Obrigatória | Para que serve |
+|---|---|---|
+| `DATABASE_URL` | sim | Conexão de servidor com o Postgres do Supabase (pooler em modo transação, porta 6543). |
+| `CODIGO_ACESSO_EQUIPE` | sim | Código único da equipe, conferido no servidor. Nunca use `NEXT_PUBLIC_`. |
+| `CANTINA_SLUG` | não | Cantina atendida por este deploy. Padrão: `midia`. |
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Na Vercel, cadastre as mesmas variáveis em *Settings > Environment Variables*.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Banco de dados (Drizzle + Supabase)
 
-## Deploy on Vercel
+O schema fica em `src/db/schema.ts` e as migrations em `drizzle/`.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+```bash
+npm run db:generate   # gera uma migration a partir das mudanças no schema
+npm run db:migrate    # aplica as migrations pendentes no banco da DATABASE_URL
+npm run db:seed       # cria a cantina "Mídia" com 2 produtos (pode rodar mais de uma vez)
+npm run db:studio     # abre o Drizzle Studio para ver os dados
+```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Triggers, permissões e outras coisas que o Drizzle não gera ficam em migrations customizadas
+(`npx drizzle-kit generate --custom --name=descricao`).
+
+## Testes
+
+```bash
+npm run lint
+npm run typecheck
+npm test              # Vitest (unidade)
+npm run test:e2e      # build + Playwright (ponta a ponta, inclusive offline)
+```
+
+Na primeira vez, instale o navegador do Playwright: `npx playwright install chromium`.
+
+O GitHub Actions (`.github/workflows/ci.yml`) roda lint, typecheck, Vitest, build e Playwright em cada push.
+
+## Estrutura
+
+```
+src/
+  app/                 páginas e rotas (App Router)
+    api/health/        GET /api/health → { ok: true }
+    api/produtos/      GET /api/produtos (exige o código da equipe)
+    codigo/            tela para digitar o código da equipe
+    serwist/[path]/    gera o service worker no build
+    sw.ts              código do service worker
+    manifest.ts        manifest da PWA
+  db/                  schema e conexão do Drizzle (só servidor)
+  local-db/            banco local no IndexedDB (Dexie) e fila outbox
+  server/              código só de servidor (código de acesso, configuração)
+  lib/                 utilitários do navegador
+drizzle/               migrations SQL
+scripts/seed.ts        seed inicial
+e2e/                   testes Playwright
+```
+
+## Decisões de arquitetura
+
+- **PWA com Next.js** (App Router) e TypeScript em modo strict.
+- **Offline-first.** No futuro, a interface vai ler e gravar só no IndexedDB (Dexie.js), e uma
+  fila outbox vai sincronizar com a API.
+- **Banco no Supabase (Postgres), acessado só pela API do Next.js com Drizzle ORM.** O navegador
+  nunca fala direto com o banco. Todas as tabelas têm RLS ativo sem nenhuma policy, e as chaves
+  públicas do Supabase (`anon` e `authenticated`) não têm permissão nelas.
+- **v1 sem login.** O acesso é protegido por um código único da equipe, conferido no servidor
+  com comparação em tempo constante.
+- **Hospedagem na Vercel.**
+- **Testes:** Vitest (unidade) e Playwright (ponta a ponta, incluindo modo offline).
+- **Pagamentos só em Pix e dinheiro**, registrados manualmente.
+
+Regras do schema:
+
+- IDs `uuid`, aceitando IDs gerados pelo cliente.
+- Dinheiro sempre em centavos (`integer`), nunca decimal.
+- `cantina_id` em todas as tabelas.
+- Nada é apagado: use `ativo`, `fechado_em`, `cancelado_em`, status `cancelado` ou `estornado_em`.
+- Toda tabela tem `atualizado_em` e `seq`. O `seq` vem de uma sequência global do Postgres
+  (`sync_seq`), preenchida por trigger a cada insert e update, e é o cursor da sincronização.
+- A fonte (Mona Sans) é servida pelo próprio app, sem Google Fonts, para funcionar offline.
