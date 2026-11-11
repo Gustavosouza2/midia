@@ -101,11 +101,43 @@ export const diasDeVenda = pgTable(
     data: date("data").notNull(),
     nome: text("nome"),
     fechadoEm: timestamp("fechado_em", { withTimezone: true }),
+    /** "Remover dia" (só sem pedidos). Criar a mesma data de novo reativa o registro. */
+    canceladoEm: timestamp("cancelado_em", { withTimezone: true }),
     ...sync(),
   },
   (t) => [
-    index("dias_de_venda_cantina_data_idx").on(t.cantinaId, t.data),
+    // Um dia por data. O id do dia é derivado da data (UUID v5), então dois aparelhos
+    // offline que criem o mesmo dia chegam ao mesmo registro.
+    uniqueIndex("dias_de_venda_cantina_data_idx").on(t.cantinaId, t.data),
     index("dias_de_venda_cantina_seq_idx").on(t.cantinaId, t.seq),
+  ],
+).enableRLS();
+
+/**
+ * Cardápio de cada dia: quais itens estão à venda e por quanto. Sem linha (ou com
+ * ativo = false), o item está "Fora" naquele dia. O preço padrão fica em produtos.
+ * O id é derivado de dia + produto (UUID v5), pelo mesmo motivo dos dias de venda.
+ */
+export const precosDoDia = pgTable(
+  "precos_do_dia",
+  {
+    id: id(),
+    cantinaId: cantinaId(),
+    diaId: uuid("dia_id")
+      .notNull()
+      .references(() => diasDeVenda.id),
+    produtoId: uuid("produto_id")
+      .notNull()
+      .references(() => produtos.id),
+    precoCentavos: integer("preco_centavos").notNull(),
+    ativo: boolean("ativo").notNull().default(true),
+    ...sync(),
+  },
+  (t) => [
+    uniqueIndex("precos_do_dia_dia_produto_idx").on(t.diaId, t.produtoId),
+    index("precos_do_dia_produto_idx").on(t.produtoId),
+    index("precos_do_dia_cantina_seq_idx").on(t.cantinaId, t.seq),
+    check("precos_do_dia_preco_centavos_check", sql`${t.precoCentavos} >= 0`),
   ],
 ).enableRLS();
 
@@ -122,6 +154,8 @@ export const pedidos = pgTable(
     status: text("status", { enum: STATUS_PEDIDO }).notNull().default("recebido"),
     vendedorId: uuid("vendedor_id").references(() => vendedores.id),
     criadoEm: timestamp("criado_em", { withTimezone: true }).notNull().defaultNow(),
+    /** Quando a reserva foi entregue (ou a venda, que já nasce entregue). */
+    entregueEm: timestamp("entregue_em", { withTimezone: true }),
     ...sync(),
   },
   (t) => [
@@ -193,6 +227,7 @@ export const TABELAS_SINCRONIZADAS = [
   "clientes",
   "produtos",
   "dias_de_venda",
+  "precos_do_dia",
   "pedidos",
   "itens_pedido",
   "pagamentos",

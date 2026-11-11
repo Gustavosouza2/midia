@@ -15,6 +15,20 @@
       "when": 1794105335530,
       "tag": "0001_trigger_seq_e_acesso",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1794357987959,
+      "tag": "0002_dias_e_precos_do_dia",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1794357995973,
+      "tag": "0003_trigger_e_acesso_precos_do_dia",
+      "breakpoints": true
     }
   ]
 }

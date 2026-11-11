@@ -6,6 +6,7 @@ import type {
   itensPedido,
   pagamentos,
   pedidos,
+  precosDoDia,
   produtos,
   vendedores,
 } from "@/db/schema";
@@ -27,6 +28,7 @@ export type Vendedor = ComoJson<typeof vendedores.$inferSelect>;
 export type Cliente = ComoJson<typeof clientes.$inferSelect>;
 export type Produto = ComoJson<typeof produtos.$inferSelect>;
 export type DiaDeVenda = ComoJson<typeof diasDeVenda.$inferSelect>;
+export type PrecoDoDia = ComoJson<typeof precosDoDia.$inferSelect>;
 export type Pedido = ComoJson<typeof pedidos.$inferSelect>;
 export type ItemPedido = ComoJson<typeof itensPedido.$inferSelect>;
 export type Pagamento = ComoJson<typeof pagamentos.$inferSelect>;
@@ -37,6 +39,7 @@ export type TabelaSincronizada =
   | "clientes"
   | "produtos"
   | "diasDeVenda"
+  | "precosDoDia"
   | "pedidos"
   | "itensPedido"
   | "pagamentos";
@@ -57,6 +60,7 @@ export class CantinaLocalDb extends Dexie {
   clientes!: EntityTable<Cliente, "id">;
   produtos!: EntityTable<Produto, "id">;
   diasDeVenda!: EntityTable<DiaDeVenda, "id">;
+  precosDoDia!: EntityTable<PrecoDoDia, "id">;
   pedidos!: EntityTable<Pedido, "id">;
   itensPedido!: EntityTable<ItemPedido, "id">;
   pagamentos!: EntityTable<Pagamento, "id">;
@@ -77,6 +81,11 @@ export class CantinaLocalDb extends Dexie {
       itensPedido: "id, pedidoId, cantinaId, produtoId, seq",
       pagamentos: "id, pedidoId, cantinaId, seq",
       outbox: "++id, tabela, registroId, criadoEm",
+    });
+    // v2: cardápio por dia (precos_do_dia). As colunas novas sem índice
+    // (dias_de_venda.cancelado_em, pedidos.entregue_em) não mudam as stores.
+    this.version(2).stores({
+      precosDoDia: "id, cantinaId, diaId, produtoId, seq",
     });
   }
 }

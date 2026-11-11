@@ -26,4 +26,26 @@ describe("banco local", () => {
     expect(fila.map((item) => item.tabela)).toEqual(["pedidos", "pagamentos"]);
     db.close();
   });
+
+  it("busca o cardápio de um dia em precosDoDia", async () => {
+    const db = new CantinaLocalDb();
+    const cantinaId = crypto.randomUUID();
+    const [dia, outroDia] = [crypto.randomUUID(), crypto.randomUUID()];
+    const preco = (diaId: string, precoCentavos: number) => ({
+      id: crypto.randomUUID(),
+      cantinaId,
+      diaId,
+      produtoId: crypto.randomUUID(),
+      precoCentavos,
+      ativo: true,
+      atualizadoEm: new Date().toISOString(),
+      seq: 1,
+    });
+
+    await db.precosDoDia.bulkAdd([preco(dia, 1200), preco(dia, 600), preco(outroDia, 1000)]);
+
+    const cardapio = await db.precosDoDia.where("diaId").equals(dia).toArray();
+    expect(cardapio.map((p) => p.precoCentavos).sort()).toEqual([1200, 600].sort());
+    db.close();
+  });
 });
