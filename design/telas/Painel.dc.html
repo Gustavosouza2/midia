@@ -1,0 +1,363 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Painel · Cantina da Mídia</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500;600;700&amp;display=swap">
+<style>
+.app{--page:#F2F2F3;--bg:#FFFFFF;--sub:#FAFAFA;--hover:#F4F4F5;--line:#ECECEE;--line-2:#E2E2E5;--text:#111113;--text-2:#3F3F46;--muted:#6B6B74;--faint:#A1A1AA;--primary:#111113;--on-primary:#FFFFFF;--accent:#00716A;--accent-fill:#359E95;--accent-soft:#E6F4F2;--accent-faint:#BFE3DE;--warn:#B4400E;--warn-soft:#FFF1E8;--ok:#00716A;--ok-soft:#E6F4F2;--shadow:0 1px 2px rgba(17,17,19,.06),0 8px 24px rgba(17,17,19,.06)}
+body{margin:0;background:#F2F2F3}
+a{color:inherit}
+button{cursor:pointer;font:inherit}
+button:focus-visible,a:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+input::placeholder{color:var(--muted)}
+.app{display:flex;min-height:100vh;background:var(--page);color:var(--text);font-family:'Geist Mono',ui-monospace,SFMono-Regular,Menlo,monospace;font-size:13px;line-height:1.5;font-variant-numeric:tabular-nums;padding:16px;box-sizing:border-box}
+.shell{flex:1;display:flex;min-width:0;background:var(--bg);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+.nav{flex:0 0 232px;box-sizing:border-box;border-right:1px solid var(--line);padding:18px 14px;display:flex;flex-direction:column;gap:18px}
+.nav-links{display:flex;flex-direction:column;gap:2px}
+.nav-label{font-size:11px;color:var(--muted);padding:0 8px 6px}
+.nav-link{display:flex;align-items:center;gap:10px;height:34px;padding:0 10px;border-radius:8px;color:var(--text-2);text-decoration:none;white-space:nowrap}
+.nav-link:hover{background:var(--hover)}
+.nav-link[aria-current="page"]{background:var(--primary);color:var(--on-primary)}
+.nav-count{margin-left:auto;font-size:11px;min-width:18px;height:18px;padding:0 4px;box-sizing:border-box;border-radius:5px;display:inline-flex;align-items:center;justify-content:center;background:var(--hover);color:var(--muted)}
+.nav-link[aria-current="page"] .nav-count{background:rgba(255,255,255,.16);color:inherit}
+.main{flex:1;min-width:0;box-sizing:border-box;padding:16px 28px 40px;display:flex;flex-direction:column;gap:24px}
+.top{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.crumb{display:inline-flex;align-items:center;gap:6px;height:30px;padding:0 10px;border:1px solid var(--line);border-radius:8px;background:var(--sub);font-size:12px;color:var(--muted)}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;height:34px;padding:0 12px;border-radius:8px;text-decoration:none;box-sizing:border-box;white-space:nowrap;font-size:12px}
+.btn-primary{border:0;background:var(--primary);color:var(--on-primary)}
+.btn-ghost{border:1px solid var(--line-2);background:var(--bg);color:var(--text)}
+.icon-btn{width:34px;height:34px;border-radius:8px;border:1px solid var(--line-2);background:var(--bg);color:var(--text-2);display:inline-flex;align-items:center;justify-content:center}
+.card{background:var(--bg);border:1px solid var(--line);border-radius:12px;min-width:0;box-sizing:border-box}
+.card-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:18px 20px 0}
+.h2{margin:0;font-size:14px;font-weight:600}
+.sub{font-size:11px;color:var(--muted)}
+.tabs{display:inline-flex;gap:2px;padding:3px;border:1px solid var(--line);border-radius:10px;background:var(--sub);max-width:100%;overflow-x:auto}
+.strip{display:grid;grid-template-columns:repeat(4,minmax(0,1fr))}
+.strip>*{padding:18px 20px;display:flex;flex-direction:column;gap:6px;min-width:0}
+.strip>*+*{border-left:1px solid var(--line)}
+.stat-label{font-size:11px;color:var(--muted);display:flex;align-items:center;gap:6px}
+.stat-value{font-size:24px;font-weight:600;letter-spacing:-.02em;line-height:1.15}
+.split{display:grid;grid-template-columns:minmax(0,1.55fr) minmax(0,1fr);gap:20px;align-items:start}
+.bar-row{display:grid;grid-template-columns:120px minmax(0,1fr) 92px;align-items:center;gap:14px;width:100%;padding:12px 20px;border:0;background:transparent;color:var(--text);text-align:left;border-top:1px solid var(--line)}
+.bar-row:hover{background:var(--sub)}
+@media (max-width:1180px){.split{grid-template-columns:minmax(0,1fr)}.strip{grid-template-columns:repeat(2,minmax(0,1fr))}.strip>*:nth-child(3){border-left:0}.strip>*:nth-child(n+3){border-top:1px solid var(--line)}}
+@media (max-width:860px){
+.app{padding:0}
+.shell{flex-direction:column;border-radius:0;border:0}
+.nav{flex:none;flex-direction:row;flex-wrap:wrap;align-items:center;gap:10px;border-right:0;border-bottom:1px solid var(--line);padding:12px 16px}
+.nav-extra,.nav-label{display:none}
+.nav-links{flex-direction:row;margin-left:auto}
+.main{padding:16px 16px 32px;gap:18px}
+}
+@media (max-width:560px){
+.nav-links{width:100%;margin-left:0;display:grid;grid-template-columns:repeat(4,minmax(0,1fr))}
+.nav-link{justify-content:center;padding:0 4px;font-size:12px}
+.nav-link svg{display:none}
+.nav-count{display:none}
+.strip>*{padding:14px 16px}
+.stat-value{font-size:20px}
+.bar-row{grid-template-columns:72px minmax(0,1fr);padding:12px 16px}
+.bar-row .bar-total{display:none}
+.hide-sm{display:none}
+}
+</style>
+</helmet>
+<div class="app">
+<div class="shell">
+
+  <nav class="nav" aria-label="Menu principal">
+    <div style="display: flex; align-items: center; gap: 10px; padding: 0 4px">
+      <div style="width: 32px; height: 32px; flex: none; border-radius: 8px; background: var(--primary); color: var(--on-primary); display: flex; align-items: center; justify-content: center">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20 20 4"></path><path d="M8 12.5 11.5 16"></path><path d="M11 9.5 14.5 13"></path><path d="M14 6.5 17.5 10"></path></svg>
+      </div>
+      <div style="display: flex; flex-direction: column; line-height: 1.2">
+        <strong style="font-size: 14px; font-weight: 600">Cantina</strong>
+        <span style="font-size: 11px; color: var(--muted)">Mídia · Casa do Pai</span>
+      </div>
+    </div>
+
+
+    <div class="nav-links">
+      <span class="nav-label">Principal</span>
+      <a class="nav-link" href="Main.dc.html" aria-current="page">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="9" rx="1.5"></rect><rect x="14" y="3" width="7" height="5" rx="1.5"></rect><rect x="14" y="12" width="7" height="9" rx="1.5"></rect><rect x="3" y="16" width="7" height="5" rx="1.5"></rect></svg>
+        Painel
+      </a>
+      <a class="nav-link" href="Vendas.dc.html">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 5h2l2.2 10.2a2 2 0 0 0 2 1.6h7.6a2 2 0 0 0 2-1.6L20 8H6"></path><circle cx="10" cy="20" r="1"></circle><circle cx="17" cy="20" r="1"></circle></svg>
+        Vendas
+      </a>
+      <a class="nav-link" href="Pendentes.dc.html">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 2"></path></svg>
+        Pendentes
+        <span class="nav-count">7</span>
+      </a>
+      <a class="nav-link" href="Cardapio.dc.html">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 2v20"></path><path d="M4 2v6a3 3 0 0 0 6 0V2"></path><path d="M17 2c-1.7 0-3 2-3 5s1.3 4 3 4v11"></path></svg>
+        Cardápio
+      </a>
+    </div>
+
+    <div class="nav-extra" style="margin-top: auto; display: flex; flex-direction: column; gap: 10px">
+      <div style="display: flex; align-items: center; gap: 10px; padding: 8px; border: 1px solid var(--line); border-radius: 10px; background: var(--sub)">
+        <span style="width: 30px; height: 30px; flex: none; border-radius: 7px; background: var(--primary); color: var(--on-primary); display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 600">GS</span>
+        <div style="display: flex; flex-direction: column; min-width: 0; line-height: 1.3">
+          <strong style="font-size: 12px; font-weight: 600">Gustavo</strong>
+          <span style="font-size: 11px; color: var(--muted)">Equipe de mídia</span>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <main class="main">
+
+    <header class="top">
+      <span class="crumb">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="9" rx="1.5"></rect><rect x="14" y="3" width="7" height="5" rx="1.5"></rect><rect x="14" y="12" width="7" height="9" rx="1.5"></rect><rect x="3" y="16" width="7" height="5" rx="1.5"></rect></svg>
+        Painel
+      </span>
+      <div style="display: flex; align-items: center; gap: 8px">
+        <a class="btn btn-primary" href="Vendas.dc.html">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14"></path><path d="M5 12h14"></path></svg>
+          Nova venda
+        </a>
+      </div>
+    </header>
+
+    <section class="card" aria-label="Boas-vindas" style="display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 20px; padding: 22px 24px">
+      <div style="display: flex; flex-direction: column; gap: 6px; min-width: 0">
+        <span style="font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--accent)">Bem-vindo de volta</span>
+        <h1 style="margin: 0; font-size: 26px; font-weight: 600; letter-spacing: -0.02em; line-height: 1.2">Painel da Cantina</h1>
+        <span style="font-size: 12px; color: var(--muted)">Resumo das vendas, do que falta receber e das reservas.</span>
+      </div>
+      <div style="display: flex; align-items: center; gap: 14px; padding: 12px 16px; border: 1px solid var(--line); border-radius: 10px; background: var(--sub)">
+        <span style="width: 40px; height: 40px; flex: none; border-radius: 9px; background: var(--accent-soft); color: var(--accent); display: flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1.05">
+          <strong style="font-size: 14px; font-weight: 700">15</strong>
+          <span style="font-size: 9px; text-transform: uppercase; letter-spacing: 0.04em">nov</span>
+        </span>
+        <div style="display: flex; flex-direction: column; line-height: 1.35">
+          <span class="sub">Próximo dia de venda</span>
+          <strong style="font-weight: 600">Domingo, 15 de novembro</strong>
+          <span style="font-size: 11px; color: var(--accent)">{{proximoInfo}}</span>
+        </div>
+      </div>
+    </section>
+
+    <section style="display: flex; flex-direction: column; gap: 12px">
+      <div style="display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px">
+        <div class="tabs" role="tablist" aria-label="Período">
+          <sc-for list="{{abas}}" as="a" hint-placeholder-count="3">
+            <button type="button" role="tab" aria-selected="{{a.on}}" onClick="{{a.pick}}" style="{{a.style}}">{{a.label}}</button>
+          </sc-for>
+        </div>
+        <span class="sub">{{periodo}}</span>
+      </div>
+
+      <div class="card strip">
+        <div>
+          <span class="stat-label">Recebido</span>
+          <strong class="stat-value">{{recebido}}</strong>
+          <div aria-hidden="true" style="height: 6px; border-radius: 2px; background: var(--line); overflow: hidden; margin-top: 2px">
+            <div style="{{barraPct}}"></div>
+          </div>
+          <span class="sub">{{pct}}% de {{vendido}} vendidos</span>
+        </div>
+        <div>
+          <span class="stat-label">Pendente</span>
+          <strong class="stat-value" style="color: var(--warn)">{{pendente}}</strong>
+          <span class="sub" style="margin-top: auto">{{devedores}} pessoas para receber</span>
+        </div>
+        <div>
+          <span class="stat-label">Itens vendidos</span>
+          <strong class="stat-value">{{qtd}}</strong>
+          <span class="sub" style="margin-top: auto">{{precoInfo}}</span>
+        </div>
+        <div>
+          <span class="stat-label">Reservas</span>
+          <strong class="stat-value">{{reservas}}</strong>
+          <span class="sub" style="margin-top: auto">{{reservasInfo}}</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="split">
+      <div class="card" style="overflow: hidden">
+        <div class="card-head" style="padding-bottom: 14px">
+          <div style="display: flex; flex-direction: column; gap: 2px">
+            <h2 class="h2">Vendido por dia</h2>
+            <span class="sub">Toque em um dia para ver só ele</span>
+          </div>
+          <div style="display: flex; gap: 14px; font-size: 11px; color: var(--muted)">
+            <span style="display: inline-flex; align-items: center; gap: 6px"><i style="width: 10px; height: 10px; border-radius: 2px; background: var(--accent-fill)"></i>Recebido</span>
+            <span style="display: inline-flex; align-items: center; gap: 6px"><i style="width: 10px; height: 10px; border-radius: 2px; background: repeating-linear-gradient(90deg, var(--accent-fill) 0 2px, transparent 2px 4px)"></i>Pendente</span>
+          </div>
+        </div>
+        <sc-for list="{{barras}}" as="b" hint-placeholder-count="2">
+          <button type="button" class="bar-row" onClick="{{b.pick}}" aria-pressed="{{b.on}}" aria-label="{{b.aria}}" style="{{b.rowStyle}}">
+            <span style="display: flex; flex-direction: column; line-height: 1.3">
+              <strong style="font-weight: 600">{{b.label}}</strong>
+              <span class="sub">{{b.meta}}</span>
+            </span>
+            <span aria-hidden="true" style="display: flex; height: 14px; gap: 2px">
+              <span style="{{b.recebidoStyle}}"></span>
+              <span style="{{b.pendenteStyle}}"></span>
+            </span>
+            <span class="bar-total" style="text-align: right; display: flex; flex-direction: column; line-height: 1.3">
+              <strong style="font-weight: 600">{{b.total}}</strong>
+              <span class="sub">{{b.pct}}</span>
+            </span>
+          </button>
+        </sc-for>
+      </div>
+
+      <div class="card" style="overflow: hidden">
+        <div class="card-head" style="padding-bottom: 10px">
+          <div style="display: flex; flex-direction: column; gap: 2px">
+            <h2 class="h2">Precisa de atenção</h2>
+            <span class="sub">Reservas a entregar e pendentes antigos</span>
+          </div>
+        </div>
+        <sc-if value="{{temReservas}}" hint-placeholder-val="{{true}}">
+          <div style="display: flex; align-items: center; justify-content: space-between; padding: 8px 20px; border-top: 1px solid var(--line); background: var(--sub)">
+            <span style="display: inline-flex; align-items: center; gap: 8px; font-size: 11px; font-weight: 600"><i style="width: 8px; height: 8px; border-radius: 99px; background: var(--text-2)"></i>Reservas para entregar</span>
+            <span class="sub">{{reservas}}</span>
+          </div>
+          <sc-for list="{{listaReservas}}" as="r" hint-placeholder-count="1">
+            <div style="display: flex; align-items: center; gap: 12px; padding: 12px 20px; border-top: 1px solid var(--line)">
+              <span style="width: 32px; height: 32px; flex: none; border-radius: 8px; background: var(--hover); color: var(--text); display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 600">{{r.iniciais}}</span>
+              <div style="flex: 1; min-width: 0; display: flex; flex-direction: column; line-height: 1.3">
+                <strong style="font-weight: 600">{{r.nome}}</strong>
+                <span class="sub">{{r.meta}}</span>
+              </div>
+              <div style="display: flex; flex-direction: column; align-items: flex-end; line-height: 1.3">
+                <strong style="font-weight: 600">{{r.valor}}</strong>
+                <span class="sub">{{r.quando}}</span>
+              </div>
+            </div>
+          </sc-for>
+        </sc-if>
+        <div style="display: flex; align-items: center; justify-content: space-between; padding: 8px 20px; border-top: 1px solid var(--line); background: var(--sub)">
+          <span style="display: inline-flex; align-items: center; gap: 8px; font-size: 11px; font-weight: 600"><i style="width: 8px; height: 8px; border-radius: 99px; background: var(--warn)"></i>Pendentes há mais tempo</span>
+          <span class="sub">{{devedores}} pessoas</span>
+        </div>
+        <sc-for list="{{atencao}}" as="f" hint-placeholder-count="3">
+          <div style="display: flex; align-items: center; gap: 12px; padding: 12px 20px; border-top: 1px solid var(--line)">
+            <span style="width: 32px; height: 32px; flex: none; border-radius: 8px; border: 1px solid var(--line); background: var(--sub); display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 600">{{f.iniciais}}</span>
+            <div style="flex: 1; min-width: 0; display: flex; flex-direction: column; line-height: 1.3">
+              <strong style="font-weight: 600">{{f.nome}}</strong>
+              <span class="sub">{{f.meta}}</span>
+            </div>
+            <div style="display: flex; flex-direction: column; align-items: flex-end; line-height: 1.3">
+              <strong style="font-weight: 600">{{f.valor}}</strong>
+              <span style="{{f.idadeStyle}}">{{f.idade}}</span>
+            </div>
+          </div>
+        </sc-for>
+        <a href="Pendentes.dc.html" style="display: flex; align-items: center; justify-content: space-between; padding: 12px 20px; border-top: 1px solid var(--line); font-size: 12px; color: var(--text-2); text-decoration: none; background: var(--sub)">
+          {{verTodos}}
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"></path><path d="m13 6 6 6-6 6"></path></svg>
+        </a>
+      </div>
+    </section>
+  </main>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1040}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { dia: 'todos' };
+  }
+  renderVals() {
+    const brl = (n) => 'R$ ' + n.toLocaleString('pt-BR', { minimumFractionDigits: n % 1 ? 2 : 0, maximumFractionDigits: 2 });
+    const DIAS = [
+      { id: '15nov', label: '15 nov', longo: 'Domingo, 15 de novembro (próximo)', qtd: 0, vendido: 0, recebido: 0, vendas: 0, proximo: true },
+      { id: '01nov', label: '01 nov', longo: 'Domingo, 1 de novembro', qtd: 6, vendido: 72, recebido: 0, vendas: 4 },
+      { id: '18out', label: '18 out', longo: 'Domingo, 18 de outubro', qtd: 22, vendido: 220, recebido: 170, vendas: 12 }
+    ];
+    const RESERVAS = [
+      { nome: 'Gustavo', dia: '15nov', item: '3× Espeto de carne', valor: 36 }
+    ];
+    const PENDENTES = [
+      { nome: 'Melina', dia: '18out', item: '3× Espeto de carne', valor: 30, dias: 17 },
+      { nome: 'Maju', dia: '18out', item: '1× Espeto de carne', valor: 10, dias: 17 },
+      { nome: 'Aniello', dia: '18out', item: '1× Espeto de carne', valor: 10, dias: 17 },
+      { nome: 'Elizete', dia: '01nov', item: '2× Espeto de carne', valor: 24, dias: 3 },
+      { nome: 'Fernando', dia: '01nov', item: '2× Espeto de carne', valor: 24, dias: 3 },
+      { nome: 'Angélica', dia: '01nov', item: '1× Espeto de carne', valor: 12, dias: 3 },
+      { nome: 'Lorrayne', dia: '01nov', item: '1× Espeto de carne', valor: 12, dias: 3 }
+    ];
+    const s = this.state;
+    const sel = DIAS.filter((d) => s.dia === 'todos' || d.id === s.dia);
+    const soma = (k) => sel.reduce((a, d) => a + d[k], 0);
+    const vendido = soma('vendido'), recebido = soma('recebido'), qtd = soma('qtd'), vendas = soma('vendas');
+    const pct = vendido ? Math.round(recebido / vendido * 100) : 0;
+    const pend = PENDENTES.filter((f) => s.dia === 'todos' || f.dia === s.dia).sort((a, b) => b.dias - a.dias || b.valor - a.valor);
+    const atual = DIAS.find((d) => d.id === s.dia);
+    const escolher = (id) => () => this.setState({ dia: id });
+    const tab = 'height: 30px; padding: 0 12px; border-radius: 7px; border: 0; font-size: 12px; white-space: nowrap; ';
+    const abas = [{ id: 'todos', label: 'Todos os dias' }].concat(DIAS.map((d) => ({ id: d.id, label: d.label }))).map((a) => ({
+      label: a.label,
+      on: s.dia === a.id,
+      pick: escolher(a.id),
+      style: tab + (s.dia === a.id ? 'background: var(--bg); color: var(--text); box-shadow: var(--shadow); font-weight: 600' : 'background: transparent; color: var(--muted)')
+    }));
+    const maxVendido = Math.max(...DIAS.map((d) => d.vendido));
+    const res = RESERVAS.filter((r) => s.dia === 'todos' || r.dia === s.dia);
+    const proximo = DIAS.find((d) => d.proximo);
+    return {
+      abas,
+      periodo: atual ? atual.longo : DIAS.length + ' dias de venda',
+      recebido: brl(recebido),
+      vendido: brl(vendido),
+      pendente: brl(vendido - recebido),
+      pct,
+      barraPct: 'height: 100%; width: ' + pct + '%; background: var(--accent-fill)',
+      devedores: pend.length,
+      qtd,
+      vendas,
+      precoInfo: vendas + (vendas === 1 ? ' venda' : ' vendas') + ' registradas',
+      proximoInfo: RESERVAS.length + (RESERVAS.length === 1 ? ' reserva feita' : ' reservas feitas'),
+      reservas: res.length,
+      reservasInfo: res.length ? brl(res.reduce((a, r) => a + r.valor, 0)) + ' a entregar' : 'nenhuma neste período',
+      temReservas: res.length > 0,
+      listaReservas: res.map((r) => ({ nome: r.nome, iniciais: r.nome.slice(0, 2).toUpperCase(), meta: r.item, valor: brl(r.valor), quando: 'para ' + DIAS.find((d) => d.id === r.dia).label })),
+      barras: DIAS.map((d) => {
+        const ativo = s.dia === 'todos' || s.dia === d.id;
+        const p = d.vendido ? Math.round(d.recebido / d.vendido * 100) : 0;
+        const nRes = RESERVAS.filter((r) => r.dia === d.id).length;
+        return {
+          label: d.label,
+          meta: d.proximo ? 'próximo · ' + nRes + (nRes === 1 ? ' reserva' : ' reservas') : d.qtd + ' itens · ' + d.vendas + ' vendas',
+          total: brl(d.vendido),
+          pct: d.proximo ? 'só reservas' : p + '% recebido',
+          on: s.dia === d.id,
+          aria: d.longo + ': ' + brl(d.vendido) + ' vendidos, ' + brl(d.recebido) + ' recebidos. Filtrar por este dia',
+          pick: escolher(s.dia === d.id ? 'todos' : d.id),
+          rowStyle: 'opacity: ' + (ativo ? '1' : '0.4'),
+          recebidoStyle: 'display: block; border-radius: 3px; background: var(--accent-fill); width: ' + (d.recebido / maxVendido * 100) + '%',
+          pendenteStyle: 'display: block; border-radius: 3px; background: repeating-linear-gradient(90deg, var(--accent-fill) 0 2px, transparent 2px 4px); width: ' + ((d.vendido - d.recebido) / maxVendido * 100) + '%'
+        };
+      }),
+      atencao: pend.slice(0, 3).map((f) => ({
+        nome: f.nome,
+        iniciais: f.nome.slice(0, 2).toUpperCase(),
+        meta: f.item + ' · ' + DIAS.find((d) => d.id === f.dia).label,
+        valor: brl(f.valor),
+        idade: 'há ' + f.dias + ' dias',
+        idadeStyle: 'font-size: 11px; color: ' + (f.dias >= 14 ? 'var(--warn)' : 'var(--muted)')
+      })),
+      verTodos: 'Ver todos os pendentes (' + pend.length + ')'
+    };
+  }
+}
+</script>
+</body>
+</html>

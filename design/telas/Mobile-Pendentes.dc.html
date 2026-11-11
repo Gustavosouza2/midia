@@ -1,0 +1,202 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Pendentes (celular) · Cantina da Mídia</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500;600;700&amp;display=swap">
+<style>
+body{margin:0;background:#F2F2F3}
+a{color:inherit}
+button{cursor:pointer;font:inherit}
+button:focus-visible,a:focus-visible,input:focus-visible{outline:2px solid #00716A;outline-offset:2px}
+input::placeholder{color:#6B6B74}
+.m{--page:#F2F2F3;--bg:#FFFFFF;--sub:#FAFAFA;--hover:#F4F4F5;--line:#ECECEE;--line-2:#E2E2E5;--text:#111113;--text-2:#3F3F46;--muted:#6B6B74;--primary:#111113;--on-primary:#FFFFFF;--accent:#00716A;--accent-fill:#359E95;--accent-soft:#E6F4F2;--warn:#B4400E;--warn-soft:#FFF1E8}
+.m{position:relative;width:390px;height:844px;display:flex;flex-direction:column;overflow:hidden;background:var(--page);color:var(--text);font-family:'Geist Mono',ui-monospace,SFMono-Regular,Menlo,monospace;font-size:13px;line-height:1.5;font-variant-numeric:tabular-nums}
+.m-head{display:flex;flex-direction:column;gap:12px;padding:16px 16px 12px;background:var(--bg);border-bottom:1px solid var(--line)}
+.m-body{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:14px}
+.m-tabs{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));background:var(--bg);border-top:1px solid var(--line);padding:6px 6px 14px}
+.m-tab{display:flex;flex-direction:column;align-items:center;gap:3px;padding:4px 0;text-decoration:none;color:var(--muted);font-size:10px}
+.m-tab .ico{position:relative;width:44px;height:28px;border-radius:9px;display:flex;align-items:center;justify-content:center}
+.m-tab[aria-current="page"]{color:var(--text);font-weight:600}
+.m-tab[aria-current="page"] .ico{background:var(--primary);color:var(--on-primary)}
+.card{background:var(--bg);border:1px solid var(--line);border-radius:12px;box-sizing:border-box;min-width:0}
+.chips{display:flex;gap:6px;overflow-x:auto;margin:0 -16px;padding:2px 16px;scrollbar-width:none;flex:none}
+.m-body>*,.m-head>*{flex-shrink:0}
+.sub{font-size:11px;color:var(--muted)}
+.field{height:42px;box-sizing:border-box;border:1px solid var(--line-2);border-radius:10px;background:var(--bg);display:flex;align-items:center;padding:0 12px;gap:8px}
+.field input{border:0;background:transparent;font:inherit;font-size:14px;color:var(--text);min-width:0;width:100%;height:100%}
+</style>
+</helmet>
+<div class="m">
+
+  <header class="m-head">
+    <div style="display: flex; flex-direction: column; line-height: 1.25">
+      <strong style="font-size: 18px; font-weight: 600">Pendentes</strong>
+      <span class="sub">Quem comprou e ainda não pagou</span>
+    </div>
+    <div class="chips" role="tablist" aria-label="Dia de venda">
+      <sc-for list="{{abas}}" as="a" hint-placeholder-count="3">
+        <button type="button" role="tab" aria-selected="{{a.on}}" onClick="{{a.pick}}" style="{{a.style}}">{{a.label}}</button>
+      </sc-for>
+    </div>
+  </header>
+
+  <div class="m-body">
+    <section class="card" style="padding: 16px; display: flex; align-items: flex-end; justify-content: space-between; gap: 12px">
+      <div style="display: flex; flex-direction: column">
+        <span class="sub">Em aberto</span>
+        <strong style="font-size: 26px; font-weight: 600; letter-spacing: -0.02em; line-height: 1.15; color: var(--warn)">{{totalAberto}}</strong>
+        <span class="sub">{{abertos}} pessoas · {{velhos}} há mais de 2 semanas</span>
+      </div>
+      <div style="display: flex; flex-direction: column; align-items: flex-end">
+        <span class="sub">Recebido agora</span>
+        <strong style="font-size: 15px; font-weight: 600; color: var(--accent)">{{recebido}}</strong>
+      </div>
+    </section>
+
+    <div class="field">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-3.5-3.5"></path></svg>
+      <label for="busca" style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0)">Buscar pessoa</label>
+      <input id="busca" type="search" placeholder="Buscar pessoa" value="{{busca}}" onChange="{{buscar}}">
+    </div>
+
+    <sc-for list="{{grupos}}" as="g" hint-placeholder-count="2">
+      <section class="card" style="overflow: hidden">
+        <div style="display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; background: var(--sub)">
+          <span style="display: inline-flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 600"><i style="{{g.dotStyle}}"></i>{{g.titulo}}</span>
+          <span class="sub">{{g.total}}</span>
+        </div>
+        <sc-for list="{{g.linhas}}" as="r" hint-placeholder-count="3">
+          <div style="padding: 12px 14px; border-top: 1px solid var(--line); display: flex; flex-direction: column; gap: 10px">
+            <div style="display: flex; align-items: center; gap: 10px">
+              <span style="width: 34px; height: 34px; flex: none; border-radius: 9px; border: 1px solid var(--line); background: var(--sub); display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 600">{{r.iniciais}}</span>
+              <div style="flex: 1; min-width: 0; display: flex; flex-direction: column; line-height: 1.3">
+                <strong style="{{r.nomeStyle}}">{{r.nome}}</strong>
+                <span class="sub">{{r.meta}}</span>
+              </div>
+              <div style="display: flex; flex-direction: column; align-items: flex-end; line-height: 1.3">
+                <strong style="font-weight: 600">{{r.valor}}</strong>
+                <span style="{{r.idadeStyle}}">{{r.idade}}</span>
+              </div>
+            </div>
+            <div style="display: flex; gap: 8px">
+              <sc-if value="{{r.mostrarReceber}}" hint-placeholder-val="{{true}}">
+                <button type="button" onClick="{{r.abrir}}" aria-label="{{r.ariaReceber}}" style="flex: 1; height: 38px; border-radius: 9px; border: 1px solid var(--line-2); background: var(--bg); color: var(--text); font-size: 13px">Receber</button>
+              </sc-if>
+              <sc-if value="{{r.escolhendo}}" hint-placeholder-val="{{false}}">
+                <button type="button" onClick="{{r.pix}}" style="flex: 1; height: 38px; border-radius: 9px; border: 0; background: var(--primary); color: var(--on-primary); font-size: 13px">Pix</button>
+                <button type="button" onClick="{{r.dinheiro}}" style="flex: 1; height: 38px; border-radius: 9px; border: 0; background: var(--primary); color: var(--on-primary); font-size: 13px">Dinheiro</button>
+                <button type="button" onClick="{{r.cancelar}}" aria-label="Cancelar" style="width: 38px; height: 38px; border-radius: 9px; border: 1px solid var(--line-2); background: var(--bg); color: var(--muted); font-size: 16px">×</button>
+              </sc-if>
+              <sc-if value="{{r.pago}}" hint-placeholder-val="{{false}}">
+                <span style="flex: 1; display: inline-flex; align-items: center; justify-content: center; height: 38px; border-radius: 9px; background: var(--accent-soft); color: var(--accent); font-size: 13px">{{r.pagoCom}}</span>
+                <button type="button" onClick="{{r.desfazer}}" style="height: 38px; padding: 0 12px; border-radius: 9px; border: 1px solid var(--line-2); background: var(--bg); color: var(--text-2); font-size: 12px">Desfazer</button>
+              </sc-if>
+            </div>
+          </div>
+        </sc-for>
+      </section>
+    </sc-for>
+    <sc-if value="{{semPendentes}}" hint-placeholder-val="{{false}}">
+      <div class="card" style="padding: 28px 16px; text-align: center; font-size: 12px; color: var(--muted)">Ninguém pendente aqui.</div>
+    </sc-if>
+  </div>
+
+  <nav class="m-tabs" aria-label="Menu">
+    <a class="m-tab" href="Mobile-Painel.dc.html">
+      <span class="ico"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="9" rx="1.5"></rect><rect x="14" y="3" width="7" height="5" rx="1.5"></rect><rect x="14" y="12" width="7" height="9" rx="1.5"></rect><rect x="3" y="16" width="7" height="5" rx="1.5"></rect></svg></span>
+      Painel
+    </a>
+    <a class="m-tab" href="Mobile-Vendas.dc.html">
+      <span class="ico"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 5h2l2.2 10.2a2 2 0 0 0 2 1.6h7.6a2 2 0 0 0 2-1.6L20 8H6"></path><circle cx="10" cy="20" r="1"></circle><circle cx="17" cy="20" r="1"></circle></svg></span>
+      Vendas
+    </a>
+    <a class="m-tab" href="Mobile-Pendentes.dc.html" aria-current="page">
+      <span class="ico"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 2"></path></svg></span>
+      Pendentes
+    </a>
+    <a class="m-tab" href="Mobile-Cardapio.dc.html">
+      <span class="ico"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 2v20"></path><path d="M4 2v6a3 3 0 0 0 6 0V2"></path><path d="M17 2c-1.7 0-3 2-3 5s1.3 4 3 4v11"></path></svg></span>
+      Cardápio
+    </a>
+  </nav>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = {
+      dia: 'todos', busca: '', escolhendo: null,
+      contas: [
+        { id: 1, nome: 'Melina', item: '3× Espeto de carne', dia: '18out', valor: 30, dias: 17, forma: null },
+        { id: 2, nome: 'Maju', item: '1× Espeto de carne', dia: '18out', valor: 10, dias: 17, forma: null },
+        { id: 3, nome: 'Aniello', item: '1× Espeto de carne', dia: '18out', valor: 10, dias: 17, forma: null },
+        { id: 4, nome: 'Elizete', item: '2× Espeto de carne', dia: '01nov', valor: 24, dias: 3, forma: null },
+        { id: 5, nome: 'Fernando', item: '2× Espeto de carne', dia: '01nov', valor: 24, dias: 3, forma: null },
+        { id: 6, nome: 'Angélica', item: '1× Espeto de carne', dia: '01nov', valor: 12, dias: 3, forma: null },
+        { id: 7, nome: 'Lorrayne', item: '1× Espeto de carne', dia: '01nov', valor: 12, dias: 3, forma: null }
+      ]
+    };
+  }
+  renderVals() {
+    const DIAS = { '01nov': '01 nov', '18out': '18 out' };
+    const brl = (n) => 'R$ ' + n.toLocaleString('pt-BR');
+    const s = this.state;
+    const termo = s.busca.trim().toLowerCase();
+    const c = s.contas.filter((x) => (s.dia === 'todos' || x.dia === s.dia) && (!termo || x.nome.toLowerCase().includes(termo)));
+    const abertas = c.filter((x) => !x.forma);
+    const chip = 'height: 32px; padding: 0 14px; border-radius: 99px; font-size: 12px; white-space: nowrap; flex: none; ';
+    const definir = (id, forma) => () => this.setState({ escolhendo: null, contas: s.contas.map((y) => y.id === id ? { ...y, forma } : y) });
+    const linha = (x) => ({
+      nome: x.nome,
+      iniciais: x.nome.slice(0, 2).toUpperCase(),
+      meta: x.item + ' · ' + DIAS[x.dia],
+      valor: brl(x.valor),
+      idade: x.forma ? 'pago' : 'há ' + x.dias + ' dias',
+      idadeStyle: 'font-size: 11px; color: ' + (x.forma ? 'var(--accent)' : x.dias >= 14 ? 'var(--warn)' : 'var(--muted)'),
+      nomeStyle: 'font-weight: 600; ' + (x.forma ? 'color: var(--muted); text-decoration: line-through' : ''),
+      mostrarReceber: !x.forma && s.escolhendo !== x.id,
+      escolhendo: !x.forma && s.escolhendo === x.id,
+      pago: !!x.forma,
+      pagoCom: x.forma === 'pix' ? 'Pago via Pix' : 'Pago em dinheiro',
+      ariaReceber: 'Receber ' + brl(x.valor) + ' de ' + x.nome,
+      abrir: () => this.setState({ escolhendo: x.id }),
+      cancelar: () => this.setState({ escolhendo: null }),
+      pix: definir(x.id, 'pix'),
+      dinheiro: definir(x.id, 'dinheiro'),
+      desfazer: definir(x.id, null)
+    });
+    const grupos = [
+      { titulo: 'Há mais de 2 semanas', lista: c.filter((x) => x.dias >= 14), cor: 'var(--warn)' },
+      { titulo: 'Recentes', lista: c.filter((x) => x.dias < 14), cor: 'var(--muted)' }
+    ].filter((g) => g.lista.length).map((g) => ({
+      titulo: g.titulo,
+      total: brl(g.lista.filter((x) => !x.forma).reduce((a, x) => a + x.valor, 0)) + ' em aberto',
+      dotStyle: 'width: 8px; height: 8px; border-radius: 99px; background: ' + g.cor,
+      linhas: g.lista.map(linha)
+    }));
+    return {
+      abas: [['todos', 'Todos'], ['01nov', '01 nov'], ['18out', '18 out']].map(([id, label]) => ({
+        label, on: s.dia === id, pick: () => this.setState({ dia: id, escolhendo: null }),
+        style: chip + (s.dia === id ? 'border: 1px solid var(--primary); background: var(--primary); color: var(--on-primary)' : 'border: 1px solid var(--line-2); background: var(--bg); color: var(--text-2)')
+      })),
+      busca: s.busca,
+      buscar: (e) => this.setState({ busca: e.target.value }),
+      totalAberto: brl(abertas.reduce((a, x) => a + x.valor, 0)),
+      abertos: abertas.length,
+      velhos: abertas.filter((x) => x.dias >= 14).length,
+      recebido: brl(c.filter((x) => x.forma).reduce((a, x) => a + x.valor, 0)),
+      grupos,
+      semPendentes: grupos.length === 0
+    };
+  }
+}
+</script>
+</body>
+</html>
