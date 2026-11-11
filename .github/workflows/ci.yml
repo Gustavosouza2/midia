@@ -12,9 +12,6 @@ jobs:
   verificar:
     runs-on: ubuntu-latest
     timeout-minutes: 20
-    env:
-      # Código só para os testes; o de verdade fica nas variáveis da Vercel.
-      CODIGO_ACESSO_EQUIPE: codigo-de-teste-ci
     steps:
       - uses: actions/checkout@v4
 

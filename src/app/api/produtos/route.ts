@@ -1,12 +1,8 @@
 import { asc, eq } from "drizzle-orm";
 import { getDb, schema } from "@/db";
 import { CANTINA_SLUG } from "@/server/cantina";
-import { exigirCodigoEquipe } from "@/server/codigo-acesso";
 
-export async function GET(request: Request) {
-  const negado = exigirCodigoEquipe(request);
-  if (negado) return negado;
-
+export async function GET() {
   const { cantinas, produtos } = schema;
   const lista = await getDb()
     .select({

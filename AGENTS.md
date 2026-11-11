@@ -21,9 +21,7 @@ Leia o `README.md` antes de mudar qualquer coisa. Estas regras valem para todo c
 - **Offline-first.** A interface vai ler e gravar no IndexedDB (`src/local-db`, Dexie). Mudanças
   locais entram na tabela `outbox` e são enviadas à API depois. Não faça a interface depender da
   rede para funcionar.
-- **Código da equipe.** Toda rota de API que lê ou grava dados chama `exigirCodigoEquipe(request)`
-  de `src/server/codigo-acesso.ts` antes de qualquer outra coisa. O código vive em
-  `CODIGO_ACESSO_EQUIPE`, só no servidor; nunca crie variáveis `NEXT_PUBLIC_` com segredos.
+- **Segredos só no servidor.** Nunca crie variáveis `NEXT_PUBLIC_` com segredos.
 - **Toda escrita no servidor é idempotente:** upsert pelo `id`
   (`insert ... on conflict (id) do update`). O mesmo item da outbox pode chegar mais de uma vez.
 

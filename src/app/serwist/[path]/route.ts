@@ -18,7 +18,6 @@ export const { dynamic, dynamicParams, revalidate, generateStaticParams, GET } =
   // Páginas do app shell: abrem offline desde a primeira visita.
   additionalPrecacheEntries: [
     { url: "/", revision },
-    { url: "/codigo", revision },
     { url: "/~offline", revision },
   ],
   useNativeEsbuild: true,

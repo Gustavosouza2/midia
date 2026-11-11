@@ -32,8 +32,5 @@ export default defineConfig({
     url: `${URL_BASE}/api/health`,
     reuseExistingServer: !process.env.CI,
     timeout: 60_000,
-    env: {
-      CODIGO_ACESSO_EQUIPE: process.env.CODIGO_ACESSO_EQUIPE ?? "codigo-de-teste",
-    },
   },
 });

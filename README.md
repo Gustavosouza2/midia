@@ -14,7 +14,7 @@ abre e funciona sem internet depois da primeira visita.
 
 ```bash
 npm install
-cp .env.example .env.local   # preencha DATABASE_URL e CODIGO_ACESSO_EQUIPE
+cp .env.example .env.local   # preencha DATABASE_URL
 npm run dev                  # http://localhost:3000
 ```
 
@@ -29,7 +29,6 @@ npm run build && npm run start
 | Variável | Obrigatória | Para que serve |
 |---|---|---|
 | `DATABASE_URL` | sim | Conexão de servidor com o Postgres do Supabase (pooler em modo transação, porta 6543). |
-| `CODIGO_ACESSO_EQUIPE` | sim | Código único da equipe, conferido no servidor. Nunca use `NEXT_PUBLIC_`. |
 | `CANTINA_SLUG` | não | Cantina atendida por este deploy. Padrão: `midia`. |
 
 Na Vercel, cadastre as mesmas variáveis em *Settings > Environment Variables*.
@@ -67,15 +66,13 @@ O GitHub Actions (`.github/workflows/ci.yml`) roda lint, typecheck, Vitest, buil
 src/
   app/                 páginas e rotas (App Router)
     api/health/        GET /api/health → { ok: true }
-    api/produtos/      GET /api/produtos (exige o código da equipe)
-    codigo/            tela para digitar o código da equipe
+    api/produtos/      GET /api/produtos
     serwist/[path]/    gera o service worker no build
     sw.ts              código do service worker
     manifest.ts        manifest da PWA
   db/                  schema e conexão do Drizzle (só servidor)
   local-db/            banco local no IndexedDB (Dexie) e fila outbox
-  server/              código só de servidor (código de acesso, configuração)
-  lib/                 utilitários do navegador
+  server/              código só de servidor (configuração)
 drizzle/               migrations SQL
 scripts/seed.ts        seed inicial
 e2e/                   testes Playwright
@@ -89,8 +86,8 @@ e2e/                   testes Playwright
 - **Banco no Supabase (Postgres), acessado só pela API do Next.js com Drizzle ORM.** O navegador
   nunca fala direto com o banco. Todas as tabelas têm RLS ativo sem nenhuma policy, e as chaves
   públicas do Supabase (`anon` e `authenticated`) não têm permissão nelas.
-- **v1 sem login.** O acesso é protegido por um código único da equipe, conferido no servidor
-  com comparação em tempo constante.
+- **v1 sem login e sem código de acesso.** A API não tem autenticação: quem souber o endereço do
+  app consegue ler e gravar os dados.
 - **Hospedagem na Vercel.**
 - **Testes:** Vitest (unidade) e Playwright (ponta a ponta, incluindo modo offline).
 - **Pagamentos só em Pix e dinheiro**, registrados manualmente.
