@@ -100,4 +100,4 @@ Regras do schema:
 - Nada é apagado: use `ativo`, `fechado_em`, `cancelado_em`, status `cancelado` ou `estornado_em`.
 - Toda tabela tem `atualizado_em` e `seq`. O `seq` vem de uma sequência global do Postgres
   (`sync_seq`), preenchida por trigger a cada insert e update, e é o cursor da sincronização.
-- A fonte (Mona Sans) é servida pelo próprio app, sem Google Fonts, para funcionar offline.
+- A fonte (Geist Mono) é servida pelo próprio app, sem Google Fonts, para funcionar offline.

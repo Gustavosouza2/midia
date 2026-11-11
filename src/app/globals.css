@@ -1,28 +1,36 @@
 @import "tailwindcss";
 
-/* Tokens do design (tema escuro, uma cor primária). */
+/* Tokens do design (design/DESIGN.md): tema claro apenas, preto para ações, verde para dinheiro. */
 @theme {
-  --font-sans: "Mona Sans Variable", ui-sans-serif, system-ui, -apple-system, sans-serif;
-  --color-bg: #0e0f12;
-  --color-surface: #16171c;
-  --color-field: #0f1014;
-  --color-line: #22242b;
-  --color-line-strong: #2a2c34;
-  --color-text: #f3f4f6;
-  --color-text-2: #b4b7c1;
-  --color-muted: #8e919c;
-  --color-primary: #ff7a3d;
-  --color-primary-text: #ff8e5c;
-  --color-on-primary: #1a0c04;
+  --font-sans: "Geist Mono Variable", ui-monospace, SFMono-Regular, Menlo, monospace;
+  --color-page: #f2f2f3;
+  --color-bg: #ffffff;
+  --color-sub: #fafafa;
+  --color-hover: #f4f4f5;
+  --color-line: #ececee;
+  --color-line-2: #e2e2e5;
+  --color-text: #111113;
+  --color-text-2: #3f3f46;
+  --color-muted: #6b6b74;
+  --color-primary: #111113;
+  --color-on-primary: #ffffff;
+  --color-accent: #00716a;
+  --color-accent-fill: #359e95;
+  --color-accent-soft: #e6f4f2;
+  --color-warn: #b4400e;
+  --color-warn-soft: #fff1e8;
+  --shadow-float: 0 1px 2px rgba(17, 17, 19, 0.06), 0 8px 24px rgba(17, 17, 19, 0.06);
 }
 
 html {
-  color-scheme: dark;
+  color-scheme: light;
 }
 
 body {
-  background: var(--color-bg);
+  background: var(--color-page);
   color: var(--color-text);
   font-family: var(--font-sans);
+  font-size: 13px;
+  line-height: 1.5;
   font-variant-numeric: tabular-nums;
 }
