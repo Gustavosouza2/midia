@@ -131,6 +131,8 @@ export const precosDoDia = pgTable(
       .references(() => produtos.id),
     precoCentavos: integer("preco_centavos").notNull(),
     ativo: boolean("ativo").notNull().default(true),
+    /** Quantas unidades o dia tem para vender. Nulo = sem limite. */
+    quantidade: integer("quantidade"),
     ...sync(),
   },
   (t) => [
@@ -138,6 +140,7 @@ export const precosDoDia = pgTable(
     index("precos_do_dia_produto_idx").on(t.produtoId),
     index("precos_do_dia_cantina_seq_idx").on(t.cantinaId, t.seq),
     check("precos_do_dia_preco_centavos_check", sql`${t.precoCentavos} >= 0`),
+    check("precos_do_dia_quantidade_check", sql`${t.quantidade} >= 0`),
   ],
 ).enableRLS();
 

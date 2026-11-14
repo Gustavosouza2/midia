@@ -38,6 +38,7 @@ describe("banco local", () => {
       produtoId: crypto.randomUUID(),
       precoCentavos,
       ativo: true,
+      quantidade: null,
       atualizadoEm: new Date().toISOString(),
       seq: 1,
     });

@@ -87,6 +87,8 @@ export class CantinaLocalDb extends Dexie {
     this.version(2).stores({
       precosDoDia: "id, cantinaId, diaId, produtoId, seq",
     });
+    // precos_do_dia.quantidade (estoque do dia) não tem índice: não precisa de versão nova.
+    // Linhas gravadas antes dela não têm o campo; quem lê trata ausente como nulo (sem limite).
   }
 }
 
