@@ -3,7 +3,9 @@
 App de vendas da cantina da equipe de mídia da Igreja Casa do Pai. É uma PWA offline-first:
 abre e funciona sem internet depois da primeira visita.
 
-> Estado atual: configuração inicial. As telas de venda e a sincronização ainda não existem.
+> Estado atual: as telas Painel, Vendas, Pendentes e Cardápio funcionam offline, lendo e gravando no
+> banco local. A sincronização com o servidor (enviar a outbox e baixar mudanças) ainda não existe:
+> por enquanto só a cantina é baixada da API.
 
 ## Requisitos
 
@@ -65,13 +67,19 @@ O GitHub Actions (`.github/workflows/ci.yml`) roda lint, typecheck, Vitest, buil
 ```
 src/
   app/                 páginas e rotas (App Router)
+    (app)/             telas: / (Painel), /vendas, /pendentes, /cardapio
     api/health/        GET /api/health → { ok: true }
+    api/cantina/       GET /api/cantina (a cantina deste deploy, baixada pelo app)
     api/produtos/      GET /api/produtos
     serwist/[path]/    gera o service worker no build
     sw.ts              código do service worker
     manifest.ts        manifest da PWA
+  componentes/         componentes React, uma pasta por tela
+    ui/                componentes do shadcn/ui, ajustados aos tokens do design
+    dia/               filtro de dia (as 4 telas), "Novo dia" e "Remover dia" (Vendas e Cardápio)
   db/                  schema e conexão do Drizzle (só servidor)
-  local-db/            banco local no IndexedDB (Dexie) e fila outbox
+  lib/                 modelos de leitura puros de cada tela (com testes) e formatação
+  local-db/            banco local no IndexedDB (Dexie), escritas (escritas.ts) e fila outbox
   server/              código só de servidor (configuração)
 drizzle/               migrations SQL
 scripts/seed.ts        seed inicial
@@ -88,6 +96,8 @@ e2e/                   testes Playwright
   públicas do Supabase (`anon` e `authenticated`) não têm permissão nelas.
 - **v1 sem login e sem código de acesso.** A API não tem autenticação: quem souber o endereço do
   app consegue ler e gravar os dados.
+- **Interface com shadcn/ui** (Radix + Tailwind). Os componentes ficam em `src/componentes/ui`, e
+  os tokens de cor usam os nomes do shadcn (`design/DESIGN.md`, "Tokens").
 - **Hospedagem na Vercel.**
 - **Testes:** Vitest (unidade) e Playwright (ponta a ponta, incluindo modo offline).
 - **Pagamentos só em Pix e dinheiro**, registrados manualmente.
@@ -100,4 +110,4 @@ Regras do schema:
 - Nada é apagado: use `ativo`, `fechado_em`, `cancelado_em`, status `cancelado` ou `estornado_em`.
 - Toda tabela tem `atualizado_em` e `seq`. O `seq` vem de uma sequência global do Postgres
   (`sync_seq`), preenchida por trigger a cada insert e update, e é o cursor da sincronização.
-- A fonte (Geist Mono) é servida pelo próprio app, sem Google Fonts, para funcionar offline.
+- A fonte (Poppins) é servida pelo próprio app, sem Google Fonts, para funcionar offline.

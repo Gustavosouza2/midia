@@ -21,6 +21,18 @@ Leia o `README.md` antes de mudar qualquer coisa. Estas regras valem para todo c
 - **Offline-first.** A interface vai ler e gravar no IndexedDB (`src/local-db`, Dexie). Mudanças
   locais entram na tabela `outbox` e são enviadas à API depois. Não faça a interface depender da
   rede para funcionar.
+- **Toda escrita local passa por `src/local-db/escritas.ts`**, que grava a linha e o item da outbox
+  na mesma transação. As telas leem com `useLeituraLocal(lerBancoLocal)` e calculam em um modelo de
+  leitura puro em `src/lib/<tela>.ts`, com testes.
+- **Um componente ou função por arquivo.** Nada de subcomponentes ou funções auxiliares empilhados no
+  mesmo arquivo: cada um ganha o seu (o ESLint cobra com `react/no-multi-comp`). Exceção: os arquivos
+  do shadcn em `src/componentes/ui`, que agrupam as partes do componente por convenção.
+- **Interface com shadcn/ui** em `src/componentes/ui`. Use esses componentes antes de escrever um
+  controle à mão. As cores vêm dos tokens de `globals.css` (nomes do shadcn); não use hex solto.
+- **Dependências: use `npx npm@10 install`.** O npm 11 deste ambiente apaga do `package-lock.json`
+  os bindings nativos do rolldown e quebra o Vitest (o CLI do shadcn também roda `npm install`).
+  Depois de mexer em dependências, `grep -c 'node_modules/@rolldown/binding-' package-lock.json`
+  tem que dar 15.
 - **Segredos só no servidor.** Nunca crie variáveis `NEXT_PUBLIC_` com segredos.
 - **Toda escrita no servidor é idempotente:** upsert pelo `id`
   (`insert ... on conflict (id) do update`). O mesmo item da outbox pode chegar mais de uma vez.
