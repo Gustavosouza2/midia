@@ -1,103 +1,120 @@
 # Cantina da Mídia
 
-App de vendas da cantina da equipe de mídia da Igreja Casa do Pai. É uma PWA offline-first:
-abre e funciona sem internet depois da primeira visita.
+Sales app for the canteen run by the media team at Igreja Casa do Pai. It is an offline-first PWA:
+after the first visit it opens and works without internet.
 
-> Estado atual: configuração inicial. As telas de venda e a sincronização ainda não existem.
+The app's UI is in Portuguese. The code, file names, comments, tests and docs are in English.
 
-## Requisitos
+> Current state: the Dashboard, Sales, Pending and Menu screens work offline, reading and writing the
+> local database. Sync with the server (sending the outbox and pulling changes) does not exist yet:
+> for now only the canteen is downloaded from the API.
 
-- Node.js 22 ou mais novo
+## Requirements
+
+- Node.js 22 or newer
 - npm
 
-## Rodar localmente
+## Run locally
 
 ```bash
 npm install
-cp .env.example .env.local   # preencha DATABASE_URL
+cp .env.example .env.local   # fill in DATABASE_URL
 npm run dev                  # http://localhost:3000
 ```
 
-O service worker só é gerado no build de produção. Para testar o modo offline no navegador:
+The service worker is only generated in the production build. To try offline mode in the browser:
 
 ```bash
 npm run build && npm run start
 ```
 
-## Variáveis de ambiente
+## Environment variables
 
-| Variável | Obrigatória | Para que serve |
+| Variable | Required | Purpose |
 |---|---|---|
-| `DATABASE_URL` | sim | Conexão de servidor com o Postgres do Supabase (pooler em modo transação, porta 6543). |
-| `CANTINA_SLUG` | não | Cantina atendida por este deploy. Padrão: `midia`. |
+| `DATABASE_URL` | yes | Server connection to Supabase's Postgres (transaction-mode pooler, port 6543). |
+| `CANTEEN_SLUG` | no | Canteen served by this deploy. Default: `midia`. |
 
-Na Vercel, cadastre as mesmas variáveis em *Settings > Environment Variables*.
+On Vercel, set the same variables under *Settings > Environment Variables*.
 
-## Banco de dados (Drizzle + Supabase)
+## Database (Drizzle + Supabase)
 
-O schema fica em `src/db/schema.ts` e as migrations em `drizzle/`.
+The schema lives in `src/db/schema.ts` and the migrations in `drizzle/`.
 
 ```bash
-npm run db:generate   # gera uma migration a partir das mudanças no schema
-npm run db:migrate    # aplica as migrations pendentes no banco da DATABASE_URL
-npm run db:seed       # cria a cantina "Mídia" com 2 produtos (pode rodar mais de uma vez)
-npm run db:studio     # abre o Drizzle Studio para ver os dados
+npm run db:generate   # generates a migration from the schema changes
+npm run db:migrate    # applies pending migrations to the DATABASE_URL database
+npm run db:seed       # creates the "Mídia" canteen with 2 products (safe to run more than once)
+npm run db:studio     # opens Drizzle Studio to browse the data
 ```
 
-Triggers, permissões e outras coisas que o Drizzle não gera ficam em migrations customizadas
-(`npx drizzle-kit generate --custom --name=descricao`).
+The Postgres tables and columns still have Portuguese names (`produtos`, `preco_centavos`, …). The
+Drizzle schema maps them to English TypeScript keys (`products`, `priceCents`, …), so the code never
+uses the Portuguese names. Renaming them in Postgres needs its own migration.
 
-## Testes
+Triggers, grants and anything else Drizzle does not generate live in custom migrations
+(`npx drizzle-kit generate --custom --name=description`).
+
+## Tests
 
 ```bash
 npm run lint
 npm run typecheck
-npm test              # Vitest (unidade)
-npm run test:e2e      # build + Playwright (ponta a ponta, inclusive offline)
+npm test              # Vitest (unit)
+npm run test:e2e      # build + Playwright (end to end, offline included)
 ```
 
-Na primeira vez, instale o navegador do Playwright: `npx playwright install chromium`.
+The first time, install the Playwright browser: `npx playwright install chromium`.
 
-O GitHub Actions (`.github/workflows/ci.yml`) roda lint, typecheck, Vitest, build e Playwright em cada push.
+GitHub Actions (`.github/workflows/ci.yml`) runs lint, typecheck, Vitest, build and Playwright on
+every push.
 
-## Estrutura
+## Structure
 
 ```
 src/
-  app/                 páginas e rotas (App Router)
+  app/                 pages and routes (App Router)
+    (app)/             screens: / (Dashboard), /sales, /pending, /menu
     api/health/        GET /api/health → { ok: true }
-    api/produtos/      GET /api/produtos
-    serwist/[path]/    gera o service worker no build
-    sw.ts              código do service worker
-    manifest.ts        manifest da PWA
-  db/                  schema e conexão do Drizzle (só servidor)
-  local-db/            banco local no IndexedDB (Dexie) e fila outbox
-  server/              código só de servidor (configuração)
-drizzle/               migrations SQL
-scripts/seed.ts        seed inicial
-e2e/                   testes Playwright
+    api/canteen/       GET /api/canteen (this deploy's canteen, downloaded by the app)
+    api/products/      GET /api/products
+    serwist/[path]/    generates the service worker at build time
+    sw.ts              service worker code
+    manifest.ts        PWA manifest
+  components/          React components, one folder per screen
+    ui/                shadcn/ui components, adjusted to the design tokens
+    day/               day filter (all 4 screens), "Novo dia" and "Remover dia" (Sales and Menu)
+  db/                  Drizzle schema and connection (server only)
+  lib/                 pure read models for each screen (with tests) and formatting
+  local-db/            local IndexedDB database (Dexie), writes (writes.ts) and the outbox queue
+  server/              server-only code (configuration)
+drizzle/               SQL migrations
+scripts/seed.ts        initial seed
+e2e/                   Playwright tests
 ```
 
-## Decisões de arquitetura
+## Architecture decisions
 
-- **PWA com Next.js** (App Router) e TypeScript em modo strict.
-- **Offline-first.** No futuro, a interface vai ler e gravar só no IndexedDB (Dexie.js), e uma
-  fila outbox vai sincronizar com a API.
-- **Banco no Supabase (Postgres), acessado só pela API do Next.js com Drizzle ORM.** O navegador
-  nunca fala direto com o banco. Todas as tabelas têm RLS ativo sem nenhuma policy, e as chaves
-  públicas do Supabase (`anon` e `authenticated`) não têm permissão nelas.
-- **v1 sem login e sem código de acesso.** A API não tem autenticação: quem souber o endereço do
-  app consegue ler e gravar os dados.
-- **Hospedagem na Vercel.**
-- **Testes:** Vitest (unidade) e Playwright (ponta a ponta, incluindo modo offline).
-- **Pagamentos só em Pix e dinheiro**, registrados manualmente.
+- **PWA with Next.js** (App Router) and TypeScript in strict mode.
+- **Offline-first.** The UI reads and writes only to IndexedDB (Dexie.js), and an outbox queue will
+  sync with the API.
+- **Database on Supabase (Postgres), reached only through the Next.js API with Drizzle ORM.** The
+  browser never talks to the database directly. Every table has RLS on with no policy, and
+  Supabase's public keys (`anon` and `authenticated`) have no grants on them.
+- **v1 has no login and no access code.** The API has no authentication: anyone who knows the app's
+  address can read and write the data.
+- **UI with shadcn/ui** (Radix + Tailwind). The components live in `src/components/ui`, and the color
+  tokens use shadcn's names (`design/DESIGN.md`, "Tokens").
+- **Hosting on Vercel.**
+- **Tests:** Vitest (unit) and Playwright (end to end, including offline mode).
+- **Payments only by Pix and cash**, recorded by hand.
 
-Regras do schema:
+Schema rules:
 
-- IDs `uuid`, aceitando IDs gerados pelo cliente.
-- Dinheiro sempre em centavos (`integer`), nunca decimal.
-- `cantina_id` em todas as tabelas.
-- Nada é apagado: use `ativo`, `fechado_em`, `cancelado_em`, status `cancelado` ou `estornado_em`.
-- Toda tabela tem `atualizado_em` e `seq`. O `seq` vem de uma sequência global do Postgres
-  (`sync_seq`), preenchida por trigger a cada insert e update, e é o cursor da sincronização.
-- A fonte (Geist Mono) é servida pelo próprio app, sem Google Fonts, para funcionar offline.
+- `uuid` IDs, accepting client-generated IDs.
+- Money always in cents (`integer`), never decimal.
+- `cantina_id` on every table.
+- Nothing is deleted: use `ativo`, `fechado_em`, `cancelado_em`, status `cancelado` or `estornado_em`.
+- Every table has `atualizado_em` and `seq`. `seq` comes from a global Postgres sequence
+  (`sync_seq`), filled by a trigger on every insert and update, and is the sync cursor.
+- The font (Poppins) is served by the app itself, without Google Fonts, so it works offline.

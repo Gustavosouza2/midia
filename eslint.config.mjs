@@ -5,6 +5,12 @@ import nextTs from "eslint-config-next/typescript";
 const eslintConfig = defineConfig([
   ...nextVitals,
   ...nextTs,
+  {
+    // One component per file. The shadcn ones (ui/) group their parts (Card, CardHeader…) by convention.
+    files: ["src/**/*.tsx"],
+    ignores: ["src/components/ui/**"],
+    rules: { "react/no-multi-comp": ["error", { ignoreStateless: false }] },
+  },
   // Override default ignores of eslint-config-next.
   globalIgnores([
     // Default ignores of eslint-config-next:

@@ -8,18 +8,18 @@ type Db = PostgresJsDatabase<typeof schema>;
 const globalForDb = globalThis as unknown as { db?: Db };
 
 /**
- * Conexão de servidor com o Postgres do Supabase. Criada só na primeira chamada,
- * para que rotas que recusam o pedido antes (ex.: 401) não dependam do banco.
+ * Server connection to Supabase's Postgres. Created only on the first call,
+ * so routes that reject the request earlier (e.g. 401) do not depend on the database.
  */
 export function getDb(): Db {
   if (globalForDb.db) return globalForDb.db;
 
   const url = process.env.DATABASE_URL;
   if (!url) {
-    throw new Error("DATABASE_URL não está definida. Veja o .env.example.");
+    throw new Error("DATABASE_URL is not set. See .env.example.");
   }
 
-  // O pooler do Supabase em modo transação (porta 6543) não aceita prepared statements.
+  // Supabase's pooler in transaction mode (port 6543) does not accept prepared statements.
   const client = postgres(url, { prepare: false, max: 5 });
   globalForDb.db = drizzle({ client, schema });
   return globalForDb.db;

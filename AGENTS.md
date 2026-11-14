@@ -8,37 +8,64 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 <!-- END:nextjs-agent-rules -->
 
-# Cantina da Mídia: regras para IAs
+# Cantina da Mídia: rules for AI agents
 
-Leia o `README.md` antes de mudar qualquer coisa. Estas regras valem para todo código novo.
+Read `README.md` before changing anything. These rules apply to all new code.
 
-## Arquitetura
+## Language
 
-- **O navegador nunca acessa o banco.** Nada de cliente do Supabase no front, nada de chave
-  pública. Todo acesso ao Postgres passa pelas rotas em `src/app/api/` usando `getDb()` de
-  `src/db`. O módulo `src/db` importa `server-only`; não o importe em componentes de cliente
-  (só `import type` do schema é permitido no navegador).
-- **Offline-first.** A interface vai ler e gravar no IndexedDB (`src/local-db`, Dexie). Mudanças
-  locais entram na tabela `outbox` e são enviadas à API depois. Não faça a interface depender da
-  rede para funcionar.
-- **Segredos só no servidor.** Nunca crie variáveis `NEXT_PUBLIC_` com segredos.
-- **Toda escrita no servidor é idempotente:** upsert pelo `id`
-  (`insert ... on conflict (id) do update`). O mesmo item da outbox pode chegar mais de uma vez.
+- **Only user-facing text is in Portuguese.** Rendered JSX text, `aria-label`, placeholders, page
+  titles, the manifest, toasts and error messages shown on screen (such as `WriteError` messages)
+  stay in Portuguese, and so do the e2e selectors that match them.
+- **Everything else is in English:** folders, file names, identifiers (functions, components, hooks,
+  types, constants, props, object keys, Dexie stores and fields, Drizzle TS keys), routes and API
+  paths, environment variables, CSS classes and keyframes we own, code-like string values (status
+  codes, error codes, outbox values), comments, test titles, docs and CI.
+- **Postgres names stay in Portuguese** until a migration renames them: tables, columns, indexes,
+  constraints and enum values (`"recebido"`, `"balcao"`, `"pix"`, `"dinheiro"`, …) are remote data.
+  The schema maps them to English keys, as in
+  `products = pgTable("produtos", { priceCents: integer("preco_centavos") })`.
 
-## Regras do schema (`src/db/schema.ts`)
+## Architecture
 
-- IDs são `uuid` e podem ser gerados pelo cliente (`crypto.randomUUID()`). O servidor aceita o
-  ID que vier.
-- Dinheiro sempre em centavos, `integer`. Nunca `decimal`, `numeric` ou `float`.
-- Toda tabela de negócio tem `cantina_id`, e toda consulta filtra por ele.
-- **Nada é apagado.** Não use `DELETE`. Use `ativo = false`, `fechado_em`, `cancelado_em`,
-  status `cancelado` ou `estornado_em`.
-- Toda tabela tem `atualizado_em` e `seq`, preenchidos pelo trigger `definir_seq_e_atualizado_em`.
-  Não grave esses campos à mão. Tabela nova precisa do mesmo trigger (migration customizada).
-- Toda tabela nova tem RLS ativo sem policies (`.enableRLS()`) e `REVOKE ALL ... FROM anon, authenticated`.
-- Mudou o schema? Rode `npm run db:generate`, revise o SQL gerado e espelhe a mudança no Dexie
-  (`src/local-db`) com uma nova `this.version(n)`. Nunca edite uma migration já aplicada.
+- **The browser never touches the database.** No Supabase client in the front end, no public key.
+  All Postgres access goes through the routes in `src/app/api/` using `getDb()` from `src/db`. The
+  `src/db` module imports `server-only`; do not import it in client components (only `import type`
+  from the schema is allowed in the browser).
+- **Offline-first.** The UI reads and writes IndexedDB (`src/local-db`, Dexie). Local changes go into
+  the `outbox` table and are sent to the API later. Do not make the UI depend on the network to work.
+- **Every local write goes through `src/local-db/writes.ts`**, which saves the row and the outbox item
+  in the same transaction. Screens read with `useLocalQuery(readLocalDb)` and compute in a pure read
+  model in `src/lib/<screen>.ts`, with tests.
+- **One component or function per file.** No subcomponents or helper functions stacked in the same
+  file: each gets its own (ESLint enforces it with `react/no-multi-comp`). Exception: the shadcn files
+  in `src/components/ui`, which group the component's parts by convention.
+- **UI with shadcn/ui** in `src/components/ui`. Use these components before hand-writing a control.
+  Colors come from the `globals.css` tokens (shadcn names); do not use loose hex values.
+- **Dependencies: use `npx npm@10 install`.** This environment's npm 11 strips rolldown's native
+  bindings from `package-lock.json` and breaks Vitest (the shadcn CLI also runs `npm install`).
+  After touching dependencies, `grep -c 'node_modules/@rolldown/binding-' package-lock.json` must
+  print 15.
+- **Secrets only on the server.** Never create `NEXT_PUBLIC_` variables with secrets.
+- **Every server write is idempotent:** upsert by `id`
+  (`insert ... on conflict (id) do update`). The same outbox item may arrive more than once.
 
-## Antes de entregar
+## Schema rules (`src/db/schema.ts`)
+
+- IDs are `uuid` and may be generated by the client (`crypto.randomUUID()`). The server accepts the
+  ID it receives.
+- Money always in cents, `integer`. Never `decimal`, `numeric` or `float`.
+- Every business table has `cantina_id` (`canteenId` in TS), and every query filters by it.
+- **Nothing is deleted.** Do not use `DELETE`. Use `ativo = false`, `fechado_em`, `cancelado_em`,
+  status `cancelado` or `estornado_em`.
+- Every table has `atualizado_em` and `seq`, filled by the `definir_seq_e_atualizado_em` trigger.
+  Do not write these fields by hand. A new table needs the same trigger (custom migration).
+- Every new table has RLS on with no policies (`.enableRLS()`) and
+  `REVOKE ALL ... FROM anon, authenticated`.
+- Changed the schema? Run `npm run db:generate`, review the generated SQL and mirror the change in
+  Dexie (`src/local-db`) with a new `this.version(n)`. Never edit a migration that was already
+  applied.
+
+## Before handing off
 
 `npm run lint && npm run typecheck && npm test && npm run test:e2e`

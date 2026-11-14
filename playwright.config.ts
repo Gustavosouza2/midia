@@ -1,10 +1,10 @@
 import { defineConfig, devices } from "@playwright/test";
 
-const PORTA = 3100;
-const URL_BASE = `http://localhost:${PORTA}`;
+const PORT = 3100;
+const BASE_URL = `http://localhost:${PORT}`;
 
-// Os testes rodam contra o build de produção (o service worker só existe nele).
-// Rode `npm run build` antes, ou use `npm run test:e2e`, que já faz isso.
+// Tests run against the production build (the service worker only exists there).
+// Run `npm run build` first, or use `npm run test:e2e`, which already does it.
 export default defineConfig({
   testDir: "./e2e",
   fullyParallel: true,
@@ -12,7 +12,7 @@ export default defineConfig({
   retries: process.env.CI ? 1 : 0,
   reporter: process.env.CI ? [["github"], ["list"], ["html", { open: "never" }]] : "list",
   use: {
-    baseURL: URL_BASE,
+    baseURL: BASE_URL,
     trace: "on-first-retry",
   },
   projects: [
@@ -20,7 +20,7 @@ export default defineConfig({
       name: "chromium",
       use: {
         ...devices["Desktop Chrome"],
-        // Permite apontar para um Chromium já instalado (ex.: ambientes sem download).
+        // Lets you point to an already installed Chromium (e.g. environments without downloads).
         launchOptions: process.env.PLAYWRIGHT_CHROMIUM_PATH
           ? { executablePath: process.env.PLAYWRIGHT_CHROMIUM_PATH }
           : {},
@@ -28,8 +28,8 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: `npm run start -- --port ${PORTA}`,
-    url: `${URL_BASE}/api/health`,
+    command: `npm run start -- --port ${PORT}`,
+    url: `${BASE_URL}/api/health`,
     reuseExistingServer: !process.env.CI,
     timeout: 60_000,
   },

@@ -1,36 +1,146 @@
 @import "tailwindcss";
+@import "tw-animate-css";
 
-/* Tokens do design (design/DESIGN.md): tema claro apenas, preto para ações, verde para dinheiro. */
+/* Design tokens (design/DESIGN.md): light theme only, black for actions, green for money.
+   Names follow the shadcn/ui vocabulary, so the components in src/components/ui
+   use the design colors without adjustment. */
 @theme {
-  --font-sans: "Geist Mono Variable", ui-monospace, SFMono-Regular, Menlo, monospace;
-  --color-page: #f2f2f3;
-  --color-bg: #ffffff;
-  --color-sub: #fafafa;
-  --color-hover: #f4f4f5;
-  --color-line: #ececee;
-  --color-line-2: #e2e2e5;
-  --color-text: #111113;
-  --color-text-2: #3f3f46;
-  --color-muted: #6b6b74;
+  --font-sans: "Poppins", ui-sans-serif, system-ui, sans-serif;
+
+  --color-page: #f2f2f3; /* background behind the frame */
+  --color-background: #ffffff; /* frame, cards */
+  --color-foreground: #111113; /* main text */
+  --color-text-2: #3f3f46; /* secondary text */
+  --color-muted: #fafafa; /* section headers, inputs, tabs */
+  --color-muted-foreground: #6b6b74; /* labels, captions */
+  --color-accent: #f4f4f5; /* hover, counters */
+  --color-accent-foreground: #111113;
+  --color-border: #ececee; /* borders and dividers */
+  --color-input: #e2e2e5; /* button and input borders */
   --color-primary: #111113;
-  --color-on-primary: #ffffff;
-  --color-accent: #00716a;
-  --color-accent-fill: #359e95;
-  --color-accent-soft: #e6f4f2;
-  --color-warn: #b4400e;
-  --color-warn-soft: #fff1e8;
+  --color-primary-foreground: #ffffff;
+  --color-secondary: #f4f4f5;
+  --color-secondary-foreground: #111113;
+  --color-card: #ffffff;
+  --color-card-foreground: #111113;
+  --color-popover: #ffffff;
+  --color-popover-foreground: #111113;
+  --color-ring: #00716a;
+  --color-ok: #00716a; /* green (text): received, paid */
+  --color-ok-fill: #359e95; /* green (fill): bars, switches */
+  --color-ok-soft: #e6f4f2; /* "Pago" badge background */
+  --color-warn: #b4400e; /* orange: pending */
+  --color-warn-soft: #fff1e8; /* "Pendente" badge background */
+  --color-destructive: #b4400e;
   --shadow-float: 0 1px 2px rgba(17, 17, 19, 0.06), 0 8px 24px rgba(17, 17, 19, 0.06);
+
+  /* DESIGN.md breakpoints. Up to 560px the phone layout applies (tab bar at the bottom);
+     tablet: the menu becomes a top bar; desk: side menu; wide: stats in 4 columns. */
+  --breakpoint-tablet: 35.0625rem; /* 561px */
+  --breakpoint-desk: 53.8125rem; /* 861px */
+  --breakpoint-wide: 73.8125rem; /* 1181px */
 }
 
 html {
   color-scheme: light;
 }
 
+/* As in shadcn: a border without an explicit color uses the divider color. It lives in the base
+   layer so the border color classes (border-input, border-primary…) still apply. */
+@layer base {
+  *,
+  ::before,
+  ::after {
+    border-color: var(--color-border);
+  }
+}
+
 body {
   background: var(--color-page);
-  color: var(--color-text);
+  color: var(--color-foreground);
   font-family: var(--font-sans);
   font-size: 13px;
   line-height: 1.5;
   font-variant-numeric: tabular-nums;
+}
+
+/* Motion. Fast exit, softer entrance after the exit, so the new content
+   does not compete for attention with the old. */
+:root {
+  --duration-exit: 140ms;
+  --duration-enter: 220ms;
+  --duration-move: 360ms;
+  --ease-smooth: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@keyframes fade-in-blur {
+  from {
+    opacity: 0;
+    filter: blur(2px);
+  }
+  to {
+    opacity: 1;
+    filter: blur(0);
+  }
+}
+
+@keyframes rise {
+  from {
+    transform: translateY(8px);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+/* The frame (menu, header, tab bar) stays still; only the screen content animates. */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+}
+
+::view-transition {
+  pointer-events: none;
+}
+
+/* Switching screens from the menu: the old content fades out and the new one rises slightly on entry. */
+::view-transition-old(.screen) {
+  animation: var(--duration-exit) ease-in both fade-in-blur reverse;
+}
+
+::view-transition-new(.screen) {
+  animation:
+    var(--duration-enter) ease-out var(--duration-exit) both fade-in-blur,
+    var(--duration-move) var(--ease-smooth) var(--duration-exit) both rise;
+}
+
+/* Switching day or period on the same screen: just a soft crossfade. */
+::view-transition-group(.swap) {
+  animation-duration: var(--duration-move);
+  animation-timing-function: var(--ease-smooth);
+}
+
+::view-transition-old(.swap) {
+  animation: var(--duration-exit) ease-in both fade-in-blur reverse;
+}
+
+::view-transition-new(.swap) {
+  animation: var(--duration-enter) ease-out both fade-in-blur;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-old(*),
+  ::view-transition-new(*),
+  ::view-transition-group(*) {
+    animation-duration: 0s !important;
+    animation-delay: 0s !important;
+  }
+
+  *,
+  ::before,
+  ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }

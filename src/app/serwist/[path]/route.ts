@@ -2,7 +2,7 @@ import { spawnSync } from "node:child_process";
 import { randomUUID } from "node:crypto";
 import { createSerwistRoute } from "@serwist/turbopack";
 
-// Versão do app shell: muda a cada deploy, para o service worker baixar as páginas novas.
+// App shell version: changes on every deploy, so the service worker downloads the new pages.
 const revision =
   process.env.VERCEL_GIT_COMMIT_SHA ||
   spawnSync("git", ["rev-parse", "HEAD"], { encoding: "utf-8" }).stdout?.trim() ||
@@ -10,12 +10,12 @@ const revision =
 
 export const { dynamic, dynamicParams, revalidate, generateStaticParams, GET } = createSerwistRoute({
   swSrc: "src/app/sw.ts",
-  // Arquivos de build (inclusive a fonte) e tudo de public/ vão para o precache.
+  // Build files (including the font) and everything in public/ go into the precache.
   globPatterns: [
     ".next/static/**/*.{js,css,html,ico,png,svg,webp,json,webmanifest,woff2}",
     "public/**/*",
   ],
-  // Páginas do app shell: abrem offline desde a primeira visita.
+  // App shell pages: open offline from the first visit.
   additionalPrecacheEntries: [
     { url: "/", revision },
     { url: "/~offline", revision },

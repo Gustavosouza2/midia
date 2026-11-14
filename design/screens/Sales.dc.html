@@ -1,0 +1,548 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Vendas · Cantina da Mídia</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500;600;700&amp;display=swap">
+<style>
+.app{--page:#F2F2F3;--bg:#FFFFFF;--sub:#FAFAFA;--hover:#F4F4F5;--line:#ECECEE;--line-2:#E2E2E5;--text:#111113;--text-2:#3F3F46;--muted:#6B6B74;--primary:#111113;--on-primary:#FFFFFF;--accent:#00716A;--accent-fill:#359E95;--accent-soft:#E6F4F2;--accent-faint:#BFE3DE;--warn:#B4400E;--warn-soft:#FFF1E8;--ok:#00716A;--ok-soft:#E6F4F2;--shadow:0 1px 2px rgba(17,17,19,.06),0 8px 24px rgba(17,17,19,.06)}
+body{margin:0;background:#F2F2F3}
+a{color:inherit}
+button{cursor:pointer;font:inherit}
+button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+input::placeholder{color:var(--muted)}
+.app{display:flex;min-height:100vh;background:var(--page);color:var(--text);font-family:'Geist Mono',ui-monospace,SFMono-Regular,Menlo,monospace;font-size:13px;line-height:1.5;font-variant-numeric:tabular-nums;padding:16px;box-sizing:border-box}
+.shell{flex:1;display:flex;min-width:0;background:var(--bg);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+.nav{flex:0 0 232px;box-sizing:border-box;border-right:1px solid var(--line);padding:18px 14px;display:flex;flex-direction:column;gap:18px}
+.nav-links{display:flex;flex-direction:column;gap:2px}
+.nav-label{font-size:11px;color:var(--muted);padding:0 8px 6px}
+.nav-link{display:flex;align-items:center;gap:10px;height:34px;padding:0 10px;border-radius:8px;color:var(--text-2);text-decoration:none;white-space:nowrap}
+.nav-link:hover{background:var(--hover)}
+.nav-link[aria-current="page"]{background:var(--primary);color:var(--on-primary)}
+.nav-count{margin-left:auto;font-size:11px;min-width:18px;height:18px;padding:0 4px;box-sizing:border-box;border-radius:5px;display:inline-flex;align-items:center;justify-content:center;background:var(--hover);color:var(--muted)}
+.nav-link[aria-current="page"] .nav-count{background:rgba(255,255,255,.16);color:inherit}
+.main{flex:1;min-width:0;box-sizing:border-box;padding:16px 28px 40px;display:flex;flex-direction:column;gap:22px}
+.top{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.crumb{display:inline-flex;align-items:center;gap:6px;height:30px;padding:0 10px;border:1px solid var(--line);border-radius:8px;background:var(--sub);font-size:12px;color:var(--muted)}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;height:34px;padding:0 12px;border-radius:8px;text-decoration:none;box-sizing:border-box;white-space:nowrap;font-size:12px}
+.btn-primary{border:0;background:var(--primary);color:var(--on-primary)}
+.btn-ghost{border:1px solid var(--line-2);background:var(--bg);color:var(--text)}
+.icon-btn{width:34px;height:34px;border-radius:8px;border:1px solid var(--line-2);background:var(--bg);color:var(--text-2);display:inline-flex;align-items:center;justify-content:center}
+.card{background:var(--bg);border:1px solid var(--line);border-radius:12px;min-width:0;box-sizing:border-box}
+.h2{margin:0;font-size:14px;font-weight:600}
+.sub{font-size:11px;color:var(--muted)}
+.tabs{display:inline-flex;gap:2px;padding:3px;border:1px solid var(--line);border-radius:10px;background:var(--sub);max-width:100%;overflow-x:auto}
+.strip{display:grid;grid-template-columns:repeat(4,minmax(0,1fr))}
+.strip>*{padding:16px 20px;display:flex;flex-direction:column;gap:4px;min-width:0}
+.strip>*+*{border-left:1px solid var(--line)}
+.stat-label{font-size:11px;color:var(--muted)}
+.stat-value{font-size:22px;font-weight:600;letter-spacing:-.02em;line-height:1.2}
+.quick{display:flex;flex-wrap:wrap;align-items:flex-end;gap:10px;padding:14px}
+.fld{display:flex;flex-direction:column;gap:4px;min-width:0}
+.fld-label{font-size:11px;color:var(--muted)}
+.field{height:38px;box-sizing:border-box;border:1px solid var(--line-2);border-radius:8px;background:var(--sub);display:flex;align-items:center}
+.field input,.field select{border:0;background:transparent;font:inherit;color:var(--text);min-width:0;height:100%}
+.seg{padding:3px;gap:2px}
+.tbl{width:100%;border-collapse:collapse}
+.tbl th{font-size:11px;color:var(--muted);font-weight:500;text-align:left;padding:10px 20px;border-bottom:1px solid var(--line);background:var(--sub)}
+.tbl td{padding:12px 20px;border-bottom:1px solid var(--line)}
+.tbl tr:last-child td{border-bottom:0}
+.tbl .r{text-align:right}
+.board{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;align-items:start}
+.col{background:var(--sub);border:1px solid var(--line);border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:10px;min-width:0}
+@media (max-width:1180px){.strip{grid-template-columns:repeat(2,minmax(0,1fr))}.strip>*:nth-child(3){border-left:0}.strip>*:nth-child(n+3){border-top:1px solid var(--line)}}
+@media (max-width:980px){.board{grid-template-columns:minmax(0,1fr)}}
+@media (max-width:860px){
+.app{padding:0}
+.shell{flex-direction:column;border-radius:0;border:0}
+.nav{flex:none;flex-direction:row;flex-wrap:wrap;align-items:center;gap:10px;border-right:0;border-bottom:1px solid var(--line);padding:12px 16px}
+.nav-extra,.nav-label{display:none}
+.nav-links{flex-direction:row;margin-left:auto}
+.main{padding:16px 16px 32px;gap:18px}
+}
+@media (max-width:560px){
+.busca{width:100%!important}
+.nav-links{width:100%;margin-left:0;display:grid;grid-template-columns:repeat(4,minmax(0,1fr))}
+.nav-link{justify-content:center;padding:0 4px;font-size:12px}
+.nav-link svg{display:none}
+.nav-count{display:none}
+.strip>*{padding:14px 16px}
+.stat-value{font-size:18px}
+.quick>*{flex:1 1 100%}
+.quick .fld-sm{flex:1 1 40%}
+.tbl th,.tbl td{padding-left:14px;padding-right:14px}
+.hide-sm{display:none}
+}
+</style>
+</helmet>
+<div class="app">
+<div class="shell">
+
+  <nav class="nav" aria-label="Menu principal">
+    <div style="display: flex; align-items: center; gap: 10px; padding: 0 4px">
+      <div style="width: 32px; height: 32px; flex: none; border-radius: 8px; background: var(--primary); color: var(--on-primary); display: flex; align-items: center; justify-content: center">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20 20 4"></path><path d="M8 12.5 11.5 16"></path><path d="M11 9.5 14.5 13"></path><path d="M14 6.5 17.5 10"></path></svg>
+      </div>
+      <div style="display: flex; flex-direction: column; line-height: 1.2">
+        <strong style="font-size: 14px; font-weight: 600">Cantina</strong>
+        <span style="font-size: 11px; color: var(--muted)">Mídia · Casa do Pai</span>
+      </div>
+    </div>
+
+
+    <div class="nav-links">
+      <span class="nav-label">Principal</span>
+      <a class="nav-link" href="Main.dc.html">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="9" rx="1.5"></rect><rect x="14" y="3" width="7" height="5" rx="1.5"></rect><rect x="14" y="12" width="7" height="9" rx="1.5"></rect><rect x="3" y="16" width="7" height="5" rx="1.5"></rect></svg>
+        Painel
+      </a>
+      <a class="nav-link" href="Sales.dc.html" aria-current="page">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 5h2l2.2 10.2a2 2 0 0 0 2 1.6h7.6a2 2 0 0 0 2-1.6L20 8H6"></path><circle cx="10" cy="20" r="1"></circle><circle cx="17" cy="20" r="1"></circle></svg>
+        Vendas
+      </a>
+      <a class="nav-link" href="Pending.dc.html">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 2"></path></svg>
+        Pendentes
+        <span class="nav-count">{{pendentesTotal}}</span>
+      </a>
+      <a class="nav-link" href="Menu.dc.html">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 2v20"></path><path d="M4 2v6a3 3 0 0 0 6 0V2"></path><path d="M17 2c-1.7 0-3 2-3 5s1.3 4 3 4v11"></path></svg>
+        Cardápio
+      </a>
+    </div>
+
+    <div class="nav-extra" style="margin-top: auto; display: flex; flex-direction: column; gap: 10px">
+      <div style="display: flex; align-items: center; gap: 10px; padding: 8px; border: 1px solid var(--line); border-radius: 10px; background: var(--sub)">
+        <span style="width: 30px; height: 30px; flex: none; border-radius: 7px; background: var(--primary); color: var(--on-primary); display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 600">GS</span>
+        <div style="display: flex; flex-direction: column; min-width: 0; line-height: 1.3">
+          <strong style="font-size: 12px; font-weight: 600">Gustavo</strong>
+          <span style="font-size: 11px; color: var(--muted)">Equipe de mídia</span>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <main class="main">
+
+    <header class="top">
+      <span class="crumb">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 5h2l2.2 10.2a2 2 0 0 0 2 1.6h7.6a2 2 0 0 0 2-1.6L20 8H6"></path></svg>
+        Vendas
+      </span>
+      <div style="display: flex; align-items: center; gap: 8px">
+        <button type="button" class="btn btn-ghost">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"></rect><path d="M3 10h18"></path><path d="M12 13v5"></path><path d="M9.5 15.5h5"></path></svg>
+          Novo dia de venda
+        </button>
+      </div>
+    </header>
+
+    <section style="display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 16px">
+      <div style="display: flex; flex-direction: column; gap: 4px">
+        <h1 style="margin: 0; font-size: 26px; font-weight: 600; letter-spacing: -0.02em; line-height: 1.2">Vendas</h1>
+        <span style="font-size: 12px; color: var(--muted)">{{diaLongo}} · <a href="Menu.dc.html" style="color: var(--accent); text-underline-offset: 3px">preços no Cardápio</a></span>
+      </div>
+      <div class="tabs" role="tablist" aria-label="Dia de venda">
+        <sc-for list="{{abas}}" as="a" hint-placeholder-count="3">
+          <button type="button" role="tab" aria-selected="{{a.on}}" onClick="{{a.pick}}" style="{{a.style}}">{{a.label}}</button>
+        </sc-for>
+      </div>
+    </section>
+
+    <form class="card quick" aria-label="Nova venda ou reserva" style="box-shadow: var(--shadow)">
+      <div class="fld">
+        <span class="fld-label">Tipo</span>
+        <div class="field seg" role="group" aria-label="Tipo">
+          <sc-for list="{{tipos}}" as="p" hint-placeholder-count="2">
+            <button type="button" onClick="{{p.pick}}" aria-pressed="{{p.on}}" style="{{p.style}}">{{p.label}}</button>
+          </sc-for>
+        </div>
+      </div>
+      <div class="fld" style="flex: 1 1 180px">
+        <label class="fld-label" for="nome">Quem</label>
+        <div class="field" style="padding: 0 12px">
+          <input id="nome" type="text" placeholder="Nome da pessoa" value="{{nome}}" onChange="{{digitarNome}}" style="flex: 1">
+        </div>
+      </div>
+      <div class="fld" style="flex: 1 1 170px">
+        <label class="fld-label" for="item">Item</label>
+        <div class="field" style="padding: 0 8px">
+          <select id="item" value="{{produtoSel}}" onChange="{{escolherProduto}}" style="flex: 1; cursor: pointer">
+            <sc-for list="{{opcoesProduto}}" as="o" hint-placeholder-count="2">
+              <option value="{{o.id}}">{{o.nome}}</option>
+            </sc-for>
+          </select>
+        </div>
+      </div>
+      <div class="fld fld-sm">
+        <span class="fld-label">Qtd</span>
+        <div class="field" role="group" aria-label="Quantidade">
+          <button type="button" aria-label="Diminuir" onClick="{{menos}}" style="width: 32px; height: 36px; border: 0; background: transparent; color: var(--text); font-size: 16px">−</button>
+          <output style="min-width: 26px; text-align: center; font-weight: 600">{{qtd}}</output>
+          <button type="button" aria-label="Aumentar" onClick="{{mais}}" style="width: 32px; height: 36px; border: 0; background: transparent; color: var(--text); font-size: 16px">+</button>
+        </div>
+      </div>
+      <div class="fld fld-sm">
+        <label class="fld-label" for="preco-un">Preço un.</label>
+        <div class="field" style="padding: 0 10px; width: 100px">
+          <span class="sub">R$</span>
+          <input id="preco-un" type="text" inputmode="decimal" value="{{precoForm}}" onChange="{{digitarPreco}}" style="width: 100%; padding-left: 6px">
+        </div>
+      </div>
+      <div class="fld">
+        <span class="fld-label">Pagamento</span>
+        <div class="field seg" role="group" aria-label="Pagamento">
+          <sc-for list="{{pagamentos}}" as="p" hint-placeholder-count="2">
+            <button type="button" onClick="{{p.pick}}" aria-pressed="{{p.on}}" style="{{p.style}}">{{p.label}}</button>
+          </sc-for>
+        </div>
+      </div>
+      <button type="button" class="btn btn-primary" onClick="{{registrar}}" style="height: 38px; padding: 0 16px">{{rotuloBotao}}</button>
+    </form>
+
+    <div class="card strip">
+      <div>
+        <span class="stat-label">Itens vendidos</span>
+        <strong class="stat-value">{{totQtd}}</strong>
+        <span class="sub">{{totValor}} no total</span>
+      </div>
+      <div>
+        <span class="stat-label">Recebido</span>
+        <strong class="stat-value" style="color: var(--ok)">{{totPago}}</strong>
+      </div>
+      <div>
+        <span class="stat-label">Pendente</span>
+        <strong class="stat-value" style="color: var(--warn)">{{totPend}}</strong>
+      </div>
+      <div>
+        <span class="stat-label">Reservas</span>
+        <strong class="stat-value">{{resQtd}}</strong>
+        <span class="sub">{{resInfo}}</span>
+      </div>
+    </div>
+
+    <section style="display: flex; flex-direction: column; gap: 12px">
+      <div style="display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px">
+        <div style="display: flex; align-items: center; gap: 10px">
+          <h2 class="h2">Pedidos do dia</h2>
+          <span class="sub">{{contagem}}</span>
+        </div>
+        <div style="display: flex; flex-wrap: wrap; gap: 8px">
+          <div class="field busca" style="height: 36px; padding: 0 10px; gap: 8px; background: var(--bg); width: 220px">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-3.5-3.5"></path></svg>
+            <label for="busca" style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0)">Buscar cliente</label>
+            <input id="busca" type="search" placeholder="Buscar cliente" value="{{busca}}" onChange="{{buscar}}" style="flex: 1; font-size: 12px">
+          </div>
+          <sc-if value="{{ehLista}}" hint-placeholder-val="{{true}}">
+            <div class="tabs" role="group" aria-label="Status">
+              <sc-for list="{{filtros}}" as="f" hint-placeholder-count="4">
+                <button type="button" onClick="{{f.pick}}" aria-pressed="{{f.on}}" style="{{f.style}}">{{f.label}}</button>
+              </sc-for>
+            </div>
+          </sc-if>
+          <div class="tabs" role="group" aria-label="Visualização">
+            <sc-for list="{{visoes}}" as="v" hint-placeholder-count="2">
+              <button type="button" onClick="{{v.pick}}" aria-pressed="{{v.on}}" style="{{v.style}}">{{v.label}}</button>
+            </sc-for>
+          </div>
+        </div>
+      </div>
+
+      <sc-if value="{{ehLista}}" hint-placeholder-val="{{true}}">
+        <div class="card" style="overflow: hidden">
+          <div style="overflow-x: auto">
+            <table class="tbl">
+              <thead>
+                <tr>
+                  <th>Nome</th>
+                  <th>Item</th>
+                  <th class="r">Valor</th>
+                  <th class="hide-sm">Hora</th>
+                  <th class="r">Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                <sc-for list="{{linhas}}" as="r" hint-placeholder-count="4">
+                  <tr>
+                    <td style="font-weight: 600">{{r.nome}}</td>
+                    <td style="color: var(--text-2)">{{r.item}}</td>
+                    <td class="r" style="white-space: nowrap">
+                      <span style="display: flex; flex-direction: column; align-items: flex-end; line-height: 1.3">
+                        <span>{{r.valor}}</span>
+                        <span class="sub">{{r.unit}}</span>
+                      </span>
+                    </td>
+                    <td class="hide-sm" style="color: var(--muted)">{{r.hora}}</td>
+                    <td class="r" style="padding-top: 8px; padding-bottom: 8px; white-space: nowrap">
+                      <sc-if value="{{r.reserva}}" hint-placeholder-val="{{false}}">
+                        <span style="display: inline-flex; align-items: center; gap: 6px">
+                          <span style="display: inline-flex; align-items: center; height: 26px; padding: 0 10px; border-radius: 6px; border: 1px solid var(--line-2); background: var(--sub); color: var(--text-2); font-size: 11px">Reservado</span>
+                          <button type="button" onClick="{{r.entregar}}" style="height: 26px; padding: 0 10px; border-radius: 6px; border: 0; background: var(--primary); color: var(--on-primary); font-size: 11px">Entregar</button>
+                        </span>
+                      </sc-if>
+                      <sc-if value="{{r.entregue}}" hint-placeholder-val="{{true}}">
+                        <button type="button" onClick="{{r.toggle}}" aria-label="{{r.aria}}" style="{{r.pillStyle}}">{{r.status}}</button>
+                      </sc-if>
+                    </td>
+                  </tr>
+                </sc-for>
+              </tbody>
+            </table>
+          </div>
+          <sc-if value="{{listaVazia}}" hint-placeholder-val="{{false}}">
+            <div style="padding: 28px 20px; text-align: center; font-size: 12px; color: var(--muted)">{{vazioTexto}}</div>
+          </sc-if>
+          <sc-if value="{{temPaginas}}" hint-placeholder-val="{{true}}">
+            <nav aria-label="Páginas" style="display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 20px; border-top: 1px solid var(--line); background: var(--sub)">
+              <span class="sub">{{faixa}}</span>
+              <div style="display: flex; align-items: center; gap: 4px">
+                <button type="button" onClick="{{anterior}}" disabled="{{semAnterior}}" style="height: 30px; padding: 0 10px; border-radius: 7px; border: 1px solid var(--line-2); background: var(--bg); color: var(--text-2); font-size: 12px">‹ Anterior</button>
+                <sc-for list="{{paginas}}" as="pg" hint-placeholder-count="2">
+                  <button type="button" onClick="{{pg.pick}}" aria-current="{{pg.atual}}" style="{{pg.style}}">{{pg.n}}</button>
+                </sc-for>
+                <button type="button" onClick="{{proxima}}" disabled="{{semProxima}}" style="height: 30px; padding: 0 10px; border-radius: 7px; border: 1px solid var(--line-2); background: var(--bg); color: var(--text-2); font-size: 12px">Próxima ›</button>
+              </div>
+            </nav>
+          </sc-if>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ehQuadro}}" hint-placeholder-val="{{false}}">
+        <div class="board">
+          <sc-for list="{{colunas}}" as="c" hint-placeholder-count="3">
+            <div class="col">
+              <div style="display: flex; align-items: center; justify-content: space-between; padding: 2px 4px">
+                <span style="display: inline-flex; align-items: center; gap: 8px; font-weight: 600">
+                  <i style="{{c.dotStyle}}"></i>
+                  {{c.titulo}}
+                  <span style="font-size: 11px; color: var(--muted); font-weight: 400">{{c.qtd}}</span>
+                </span>
+                <span class="sub">{{c.total}}</span>
+              </div>
+              <sc-for list="{{c.itens}}" as="i" hint-placeholder-count="2">
+                <div class="card" style="padding: 12px 14px; display: flex; flex-direction: column; gap: 8px">
+                  <div style="display: flex; justify-content: space-between; gap: 8px">
+                    <strong style="font-weight: 600">{{i.nome}}</strong>
+                    <strong style="font-weight: 600">{{i.valor}}</strong>
+                  </div>
+                  <span class="sub" style="color: var(--text-2)">{{i.item}}</span>
+                  <div style="display: flex; justify-content: space-between; align-items: center; gap: 8px">
+                    <span class="sub">{{i.meta}}</span>
+                    <button type="button" onClick="{{i.agir}}" style="height: 26px; padding: 0 8px; border-radius: 6px; border: 1px solid var(--line-2); background: var(--bg); color: var(--text-2); font-size: 11px">{{i.acao}}</button>
+                  </div>
+                </div>
+              </sc-for>
+              <sc-if value="{{c.vazia}}" hint-placeholder-val="{{false}}">
+                <div style="padding: 18px; text-align: center; font-size: 12px; color: var(--muted); border: 1px dashed var(--line-2); border-radius: 10px">Nenhum pedido aqui</div>
+              </sc-if>
+            </div>
+          </sc-for>
+        </div>
+      </sc-if>
+    </section>
+  </main>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1040}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = {
+      dia: '01nov',
+      visao: 'lista',
+      filtro: 'todas',
+      busca: '',
+      pagina: 1,
+      tipo: 'venda',
+      nome: '',
+      produto: 'espeto',
+      qtd: 1,
+      precoTexto: null,
+      pago: false,
+      proximoId: 100,
+      cardapio: {
+        '15nov': { espeto: 12, refri: 6 },
+        '01nov': { espeto: 12, refri: 6 },
+        '18out': { espeto: 10 }
+      },
+      pedidos: [
+        { id: 1, dia: '18out', nome: 'Charlene', produto: 'espeto', qtd: 5, preco: 10, hora: '18:45', reserva: false, pago: true },
+        { id: 2, dia: '18out', nome: 'Mariana', produto: 'espeto', qtd: 1, preco: 10, hora: '18:45', reserva: false, pago: true },
+        { id: 3, dia: '18out', nome: 'Paulinha', produto: 'espeto', qtd: 3, preco: 10, hora: '20:12', reserva: false, pago: true },
+        { id: 4, dia: '18out', nome: 'Melina', produto: 'espeto', qtd: 3, preco: 10, hora: '20:13', reserva: false, pago: false },
+        { id: 5, dia: '18out', nome: 'Elised', produto: 'espeto', qtd: 2, preco: 10, hora: '20:15', reserva: false, pago: true },
+        { id: 6, dia: '18out', nome: 'Evelyn', produto: 'espeto', qtd: 1, preco: 10, hora: '20:15', reserva: false, pago: true },
+        { id: 7, dia: '18out', nome: 'Tamires', produto: 'espeto', qtd: 1, preco: 10, hora: '20:15', reserva: false, pago: true },
+        { id: 8, dia: '18out', nome: 'Renan e Tay', produto: 'espeto', qtd: 2, preco: 10, hora: '20:16', reserva: false, pago: true },
+        { id: 9, dia: '18out', nome: 'Júnior', produto: 'espeto', qtd: 1, preco: 10, hora: '20:17', reserva: false, pago: true },
+        { id: 10, dia: '18out', nome: 'Aniello', produto: 'espeto', qtd: 1, preco: 10, hora: '20:18', reserva: false, pago: false },
+        { id: 11, dia: '18out', nome: 'José', produto: 'espeto', qtd: 1, preco: 10, hora: '20:19', reserva: false, pago: true },
+        { id: 12, dia: '18out', nome: 'Maju', produto: 'espeto', qtd: 1, preco: 10, hora: '20:19', reserva: false, pago: false },
+        { id: 13, dia: '01nov', nome: 'Elizete', produto: 'espeto', qtd: 2, preco: 12, hora: '20:56', reserva: false, pago: false },
+        { id: 14, dia: '01nov', nome: 'Fernando', produto: 'espeto', qtd: 2, preco: 12, hora: '20:57', reserva: false, pago: false },
+        { id: 15, dia: '01nov', nome: 'Angélica', produto: 'espeto', qtd: 1, preco: 12, hora: '20:58', reserva: false, pago: false },
+        { id: 16, dia: '01nov', nome: 'Lorrayne', produto: 'espeto', qtd: 1, preco: 12, hora: '20:58', reserva: false, pago: false },
+        { id: 17, dia: '15nov', nome: 'Gustavo', produto: 'espeto', qtd: 3, preco: 12, hora: 'reservou 08 nov', reserva: true, pago: false }
+      ]
+    };
+  }
+  renderVals() {
+    const DIAS = {
+      '15nov': { label: '15 nov · próximo', longo: 'Domingo, 15 de novembro · próximo dia de venda' },
+      '01nov': { label: '01 nov', longo: 'Domingo, 1 de novembro' },
+      '18out': { label: '18 out', longo: 'Domingo, 18 de outubro' }
+    };
+    const PRODUTOS = { espeto: 'Espeto de carne', refri: 'Refrigerante lata' };
+    const num = (t) => { const n = Number(String(t).replace(',', '.').replace(/[^0-9.]/g, '')); return Number.isFinite(n) ? n : 0; };
+    const brl = (n) => 'R$ ' + n.toLocaleString('pt-BR', { minimumFractionDigits: n % 1 ? 2 : 0, maximumFractionDigits: 2 });
+    const s = this.state;
+    const menu = s.cardapio[s.dia] || {};
+    const produtosDia = Object.keys(menu);
+    const produtoSel = produtosDia.includes(s.produto) ? s.produto : produtosDia[0];
+    const precoBase = menu[produtoSel] || 0;
+    const precoForm = s.precoTexto !== null ? s.precoTexto : String(precoBase).replace('.', ',');
+    const precoUn = num(precoForm);
+    const doDia = s.pedidos.filter((p) => p.dia === s.dia);
+    const entregues = doDia.filter((p) => !p.reserva);
+    const reservas = doDia.filter((p) => p.reserva);
+    const valor = (p) => p.qtd * p.preco;
+    const soma = (lista) => lista.reduce((a, p) => a + valor(p), 0);
+    const itemTxt = (p) => p.qtd + '× ' + PRODUTOS[p.produto];
+    const tab = 'height: 30px; padding: 0 12px; border-radius: 7px; border: 0; font-size: 12px; white-space: nowrap; ';
+    const tabOn = 'background: var(--bg); color: var(--text); box-shadow: var(--shadow); font-weight: 600';
+    const tabOff = 'background: transparent; color: var(--muted)';
+    const segBtn = 'flex: 1; height: 30px; padding: 0 12px; border: 0; border-radius: 6px; font-size: 12px; white-space: nowrap; ';
+    const segOn = 'background: var(--primary); color: var(--on-primary)';
+    const atualizar = (id, mudanca) => () => this.setState({ pedidos: s.pedidos.map((p) => p.id === id ? { ...p, ...mudanca } : p) });
+    const pill = 'display: inline-flex; align-items: center; height: 26px; padding: 0 10px; border-radius: 6px; border: 0; font-size: 11px; ';
+    const termo = s.busca.trim().toLowerCase();
+    const filtrados = doDia.filter((p) => !termo || p.nome.toLowerCase().includes(termo)).filter((p) => s.filtro === 'todas'
+      || (s.filtro === 'reservas' && p.reserva)
+      || (s.filtro === 'pendentes' && !p.reserva && !p.pago)
+      || (s.filtro === 'pagas' && !p.reserva && p.pago));
+    const agora = () => { const d = new Date(); return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0'); };
+    const reserva = s.tipo === 'reserva';
+    const POR_PAGINA = 6;
+    const totalPaginas = Math.max(1, Math.ceil(filtrados.length / POR_PAGINA));
+    const pagina = Math.min(s.pagina, totalPaginas);
+    const naPagina = filtrados.slice((pagina - 1) * POR_PAGINA, pagina * POR_PAGINA);
+    return {
+      pendentesTotal: s.pedidos.filter((p) => !p.reserva && !p.pago).length,
+      diaLongo: DIAS[s.dia].longo,
+      abas: Object.keys(DIAS).map((id) => ({
+        label: DIAS[id].label,
+        on: s.dia === id,
+        pick: () => this.setState({ dia: id, filtro: 'todas', pagina: 1, precoTexto: null }),
+        style: tab + (s.dia === id ? tabOn : tabOff)
+      })),
+      tipos: [['venda', 'Venda'], ['reserva', 'Reserva']].map(([id, label]) => ({
+        label,
+        on: s.tipo === id,
+        pick: () => this.setState({ tipo: id }),
+        style: segBtn + (s.tipo === id ? segOn : tabOff)
+      })),
+      nome: s.nome,
+      digitarNome: (e) => this.setState({ nome: e.target.value }),
+      produtoSel,
+      opcoesProduto: produtosDia.map((id) => ({ id, nome: PRODUTOS[id] + ' · ' + brl(menu[id]) })),
+      escolherProduto: (e) => this.setState({ produto: e.target.value, precoTexto: null }),
+      qtd: s.qtd,
+      menos: () => this.setState({ qtd: Math.max(1, s.qtd - 1) }),
+      mais: () => this.setState({ qtd: Math.min(99, s.qtd + 1) }),
+      precoForm,
+      digitarPreco: (e) => this.setState({ precoTexto: e.target.value }),
+      pagamentos: [[true, 'Pago'], [false, 'Pendente']].map(([v, label]) => ({
+        label,
+        on: s.pago === v,
+        pick: () => this.setState({ pago: v }),
+        style: segBtn + (s.pago === v ? segOn : tabOff)
+      })),
+      rotuloBotao: (reserva ? 'Reservar · ' : 'Registrar · ') + brl(s.qtd * precoUn),
+      registrar: () => {
+        const nome = s.nome.trim();
+        if (!nome || precoUn <= 0) return;
+        const novo = { id: s.proximoId, dia: s.dia, nome, produto: produtoSel, qtd: s.qtd, preco: precoUn, hora: reserva ? 'reservou agora' : agora(), reserva, pago: s.pago };
+        this.setState({ pedidos: s.pedidos.concat([novo]), proximoId: s.proximoId + 1, nome: '', qtd: 1, precoTexto: null });
+      },
+      totQtd: entregues.reduce((a, p) => a + p.qtd, 0),
+      totValor: brl(soma(entregues)),
+      totPago: brl(soma(entregues.filter((p) => p.pago))),
+      totPend: brl(soma(entregues.filter((p) => !p.pago))),
+      resQtd: reservas.length,
+      resInfo: reservas.length ? reservas.reduce((a, p) => a + p.qtd, 0) + ' itens · ' + brl(soma(reservas)) : 'nenhuma para este dia',
+      contagem: filtrados.length + (filtrados.length === 1 ? ' pedido' : ' pedidos'),
+      ehLista: s.visao === 'lista',
+      ehQuadro: s.visao === 'quadro',
+      listaVazia: filtrados.length === 0,
+      visoes: [['lista', 'Lista'], ['quadro', 'Quadro']].map(([id, label]) => ({
+        label,
+        on: s.visao === id,
+        pick: () => this.setState({ visao: id }),
+        style: tab + (s.visao === id ? tabOn : tabOff)
+      })),
+      filtros: [['todas', 'Todos'], ['reservas', 'Reservas'], ['pendentes', 'Pendentes'], ['pagas', 'Pagos']].map(([id, label]) => ({
+        label,
+        on: s.filtro === id,
+        pick: () => this.setState({ filtro: id, pagina: 1 }),
+        style: tab + (s.filtro === id ? tabOn : tabOff)
+      })),
+      busca: s.busca,
+      buscar: (e) => this.setState({ busca: e.target.value, pagina: 1 }),
+      vazioTexto: termo ? 'Ninguém com esse nome neste dia.' : 'Nada por aqui ainda. Registre a primeira venda ou reserva acima.',
+      temPaginas: totalPaginas > 1,
+      faixa: 'Mostrando ' + ((pagina - 1) * POR_PAGINA + 1) + '–' + Math.min(pagina * POR_PAGINA, filtrados.length) + ' de ' + filtrados.length,
+      semAnterior: pagina === 1,
+      semProxima: pagina === totalPaginas,
+      anterior: () => this.setState({ pagina: Math.max(1, pagina - 1) }),
+      proxima: () => this.setState({ pagina: Math.min(totalPaginas, pagina + 1) }),
+      paginas: Array.from({ length: totalPaginas }, (_, i) => i + 1).map((n) => ({
+        n,
+        atual: n === pagina ? 'page' : 'false',
+        pick: () => this.setState({ pagina: n }),
+        style: 'min-width: 30px; height: 30px; border-radius: 7px; font-size: 12px; ' + (n === pagina ? 'border: 0; background: var(--primary); color: var(--on-primary)' : 'border: 1px solid var(--line-2); background: var(--bg); color: var(--text-2)')
+      })),
+      linhas: naPagina.map((p) => ({
+        nome: p.nome,
+        item: itemTxt(p),
+        valor: brl(valor(p)),
+        unit: brl(p.preco) + ' cada',
+        hora: p.hora,
+        reserva: p.reserva,
+        entregue: !p.reserva,
+        entregar: atualizar(p.id, { reserva: false, hora: agora() }),
+        status: p.pago ? 'Pago' : 'Pendente',
+        aria: p.pago ? 'Pago. Tocar para voltar a pendente' : 'Pendente. Tocar para marcar como pago',
+        pillStyle: pill + (p.pago ? 'background: var(--ok-soft); color: var(--ok)' : 'background: var(--warn-soft); color: var(--warn)'),
+        toggle: atualizar(p.id, { pago: !p.pago })
+      })),
+      colunas: [
+        { titulo: 'Reservas', lista: reservas, cor: 'var(--text-2)', acao: 'Entregar', mudanca: (p) => ({ reserva: false, hora: agora() }) },
+        { titulo: 'Pendentes', lista: entregues.filter((p) => !p.pago), cor: 'var(--warn)', acao: 'Marcar pago', mudanca: () => ({ pago: true }) },
+        { titulo: 'Pagos', lista: entregues.filter((p) => p.pago), cor: 'var(--ok)', acao: 'Desfazer', mudanca: () => ({ pago: false }) }
+      ].map((c) => ({
+        titulo: c.titulo,
+        qtd: c.lista.length,
+        total: brl(soma(c.lista)),
+        vazia: c.lista.length === 0,
+        dotStyle: 'width: 8px; height: 8px; border-radius: 99px; background: ' + c.cor,
+        itens: c.lista.map((p) => ({
+          nome: p.nome,
+          valor: brl(valor(p)),
+          item: itemTxt(p),
+          meta: p.hora,
+          acao: c.acao,
+          agir: atualizar(p.id, c.mudanca(p))
+        }))
+      }))
+    };
+  }
+}
+</script>
+</body>
+</html>

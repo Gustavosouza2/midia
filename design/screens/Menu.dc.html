@@ -1,0 +1,311 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Cardápio · Cantina da Mídia</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500;600;700&amp;display=swap">
+<style>
+.app{--page:#F2F2F3;--bg:#FFFFFF;--sub:#FAFAFA;--hover:#F4F4F5;--line:#ECECEE;--line-2:#E2E2E5;--text:#111113;--text-2:#3F3F46;--muted:#6B6B74;--primary:#111113;--on-primary:#FFFFFF;--accent:#00716A;--accent-fill:#359E95;--accent-soft:#E6F4F2;--warn:#B4400E;--warn-soft:#FFF1E8;--shadow:0 1px 2px rgba(17,17,19,.06),0 8px 24px rgba(17,17,19,.06)}
+body{margin:0;background:#F2F2F3}
+a{color:inherit}
+button{cursor:pointer;font:inherit}
+button:focus-visible,a:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+input::placeholder{color:var(--muted)}
+.app{display:flex;min-height:100vh;background:var(--page);color:var(--text);font-family:'Geist Mono',ui-monospace,SFMono-Regular,Menlo,monospace;font-size:13px;line-height:1.5;font-variant-numeric:tabular-nums;padding:16px;box-sizing:border-box}
+.shell{flex:1;display:flex;min-width:0;background:var(--bg);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+.nav{flex:0 0 232px;box-sizing:border-box;border-right:1px solid var(--line);padding:18px 14px;display:flex;flex-direction:column;gap:18px}
+.nav-links{display:flex;flex-direction:column;gap:2px}
+.nav-label{font-size:11px;color:var(--muted);padding:0 8px 6px}
+.nav-link{display:flex;align-items:center;gap:10px;height:34px;padding:0 10px;border-radius:8px;color:var(--text-2);text-decoration:none;white-space:nowrap}
+.nav-link:hover{background:var(--hover)}
+.nav-link[aria-current="page"]{background:var(--primary);color:var(--on-primary)}
+.nav-count{margin-left:auto;font-size:11px;min-width:18px;height:18px;padding:0 4px;box-sizing:border-box;border-radius:5px;display:inline-flex;align-items:center;justify-content:center;background:var(--hover);color:var(--muted)}
+.main{flex:1;min-width:0;box-sizing:border-box;padding:16px 28px 40px;display:flex;flex-direction:column;gap:22px}
+.top{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.crumb{display:inline-flex;align-items:center;gap:6px;height:30px;padding:0 10px;border:1px solid var(--line);border-radius:8px;background:var(--sub);font-size:12px;color:var(--muted)}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;height:34px;padding:0 12px;border-radius:8px;text-decoration:none;box-sizing:border-box;white-space:nowrap;font-size:12px}
+.btn-primary{border:0;background:var(--primary);color:var(--on-primary)}
+.btn-ghost{border:1px solid var(--line-2);background:var(--bg);color:var(--text)}
+.icon-btn{width:34px;height:34px;border-radius:8px;border:1px solid var(--line-2);background:var(--bg);color:var(--text-2);display:inline-flex;align-items:center;justify-content:center}
+.card{background:var(--bg);border:1px solid var(--line);border-radius:12px;min-width:0;box-sizing:border-box}
+.h2{margin:0;font-size:14px;font-weight:600}
+.sub{font-size:11px;color:var(--muted)}
+.tabs{display:inline-flex;gap:2px;padding:3px;border:1px solid var(--line);border-radius:10px;background:var(--sub);max-width:100%;overflow-x:auto}
+.field{height:36px;box-sizing:border-box;border:1px solid var(--line-2);border-radius:8px;background:var(--bg);display:flex;align-items:center;padding:0 10px;gap:6px}
+.field input{border:0;background:transparent;font:inherit;color:var(--text);min-width:0;width:100%;height:100%}
+.item-row{display:grid;grid-template-columns:minmax(0,1fr) 220px 110px 150px;align-items:center;gap:16px;padding:14px 20px;border-top:1px solid var(--line)}
+.item-head{display:grid;grid-template-columns:minmax(0,1fr) 220px 110px 150px;gap:16px;padding:10px 20px;font-size:11px;color:var(--muted);background:var(--sub)}
+.switch{display:inline-flex;align-items:center;gap:8px;border:0;background:transparent;padding:0;font-size:12px;color:var(--text-2)}
+@media (max-width:860px){
+.app{padding:0}
+.shell{flex-direction:column;border-radius:0;border:0}
+.nav{flex:none;flex-direction:row;flex-wrap:wrap;align-items:center;gap:10px;border-right:0;border-bottom:1px solid var(--line);padding:12px 16px}
+.nav-extra,.nav-label{display:none}
+.nav-links{flex-direction:row;margin-left:auto}
+.main{padding:16px 16px 32px;gap:18px}
+.item-head{display:none}
+.item-row{grid-template-columns:minmax(0,1fr) auto;row-gap:10px}
+.item-row .col-vendidos{display:none}
+}
+@media (max-width:560px){
+.nav-links{width:100%;margin-left:0;display:grid;grid-template-columns:repeat(4,minmax(0,1fr))}
+.nav-link{justify-content:center;padding:0 4px;font-size:12px}
+.nav-link svg{display:none}
+.nav-count{display:none}
+.item-row{padding:14px 16px}
+}
+</style>
+</helmet>
+<div class="app">
+<div class="shell">
+
+  <nav class="nav" aria-label="Menu principal">
+    <div style="display: flex; align-items: center; gap: 10px; padding: 0 4px">
+      <div style="width: 32px; height: 32px; flex: none; border-radius: 8px; background: var(--primary); color: var(--on-primary); display: flex; align-items: center; justify-content: center">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20 20 4"></path><path d="M8 12.5 11.5 16"></path><path d="M11 9.5 14.5 13"></path><path d="M14 6.5 17.5 10"></path></svg>
+      </div>
+      <div style="display: flex; flex-direction: column; line-height: 1.2">
+        <strong style="font-size: 14px; font-weight: 600">Cantina</strong>
+        <span style="font-size: 11px; color: var(--muted)">Mídia · Casa do Pai</span>
+      </div>
+    </div>
+
+    <div class="nav-links">
+      <span class="nav-label">Principal</span>
+      <a class="nav-link" href="Main.dc.html">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="9" rx="1.5"></rect><rect x="14" y="3" width="7" height="5" rx="1.5"></rect><rect x="14" y="12" width="7" height="9" rx="1.5"></rect><rect x="3" y="16" width="7" height="5" rx="1.5"></rect></svg>
+        Painel
+      </a>
+      <a class="nav-link" href="Sales.dc.html">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 5h2l2.2 10.2a2 2 0 0 0 2 1.6h7.6a2 2 0 0 0 2-1.6L20 8H6"></path><circle cx="10" cy="20" r="1"></circle><circle cx="17" cy="20" r="1"></circle></svg>
+        Vendas
+      </a>
+      <a class="nav-link" href="Pending.dc.html">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 2"></path></svg>
+        Pendentes
+        <span class="nav-count">7</span>
+      </a>
+      <a class="nav-link" href="Menu.dc.html" aria-current="page">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 2v20"></path><path d="M4 2v6a3 3 0 0 0 6 0V2"></path><path d="M17 2c-1.7 0-3 2-3 5s1.3 4 3 4v11"></path></svg>
+        Cardápio
+      </a>
+    </div>
+
+    <div class="nav-extra" style="margin-top: auto; display: flex; flex-direction: column; gap: 10px">
+      <div style="display: flex; align-items: center; gap: 10px; padding: 8px; border: 1px solid var(--line); border-radius: 10px; background: var(--sub)">
+        <span style="width: 30px; height: 30px; flex: none; border-radius: 7px; background: var(--primary); color: var(--on-primary); display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 600">GS</span>
+        <div style="display: flex; flex-direction: column; min-width: 0; line-height: 1.3">
+          <strong style="font-size: 12px; font-weight: 600">Gustavo</strong>
+          <span style="font-size: 11px; color: var(--muted)">Equipe de mídia</span>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <main class="main">
+
+    <header class="top">
+      <span class="crumb">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 2v20"></path><path d="M4 2v6a3 3 0 0 0 6 0V2"></path><path d="M17 2c-1.7 0-3 2-3 5s1.3 4 3 4v11"></path></svg>
+        Cardápio
+      </span>
+      <div style="display: flex; align-items: center; gap: 8px">
+        <button type="button" class="btn btn-primary" onClick="{{abrirNovo}}">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14"></path><path d="M5 12h14"></path></svg>
+          Adicionar item
+        </button>
+      </div>
+    </header>
+
+    <section style="display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 16px">
+      <div style="display: flex; flex-direction: column; gap: 4px; max-width: 560px">
+        <h1 style="margin: 0; font-size: 26px; font-weight: 600; letter-spacing: -0.02em; line-height: 1.2">Cardápio</h1>
+        <span style="font-size: 12px; color: var(--muted)">O que a cantina vende e o preço de cada item em cada dia de venda.</span>
+      </div>
+      <div class="tabs" role="tablist" aria-label="Dia de venda">
+        <sc-for list="{{abas}}" as="a" hint-placeholder-count="3">
+          <button type="button" role="tab" aria-selected="{{a.on}}" onClick="{{a.pick}}" style="{{a.style}}">{{a.label}}</button>
+        </sc-for>
+      </div>
+    </section>
+
+    <sc-if value="{{novoAberto}}" hint-placeholder-val="{{false}}">
+      <form class="card" aria-label="Novo item" style="display: flex; flex-wrap: wrap; align-items: flex-end; gap: 10px; padding: 14px; box-shadow: var(--shadow)">
+        <div style="display: flex; flex-direction: column; gap: 4px; flex: 1 1 240px">
+          <label for="novo-nome" class="sub">Nome do item</label>
+          <div class="field"><input id="novo-nome" type="text" placeholder="Ex.: Pão de queijo" value="{{novoNome}}" onChange="{{digitarNome}}"></div>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 4px; width: 140px">
+          <label for="novo-preco" class="sub">Preço padrão</label>
+          <div class="field"><span class="sub">R$</span><input id="novo-preco" type="text" inputmode="decimal" placeholder="0,00" value="{{novoPreco}}" onChange="{{digitarPreco}}"></div>
+        </div>
+        <button type="button" class="btn btn-primary" onClick="{{salvarNovo}}" style="height: 36px">Salvar item</button>
+        <button type="button" class="btn btn-ghost" onClick="{{fecharNovo}}" style="height: 36px">Cancelar</button>
+      </form>
+    </sc-if>
+
+    <section class="card" style="overflow: hidden">
+      <div style="display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; padding: 16px 20px">
+        <div style="display: flex; flex-direction: column; gap: 2px">
+          <h2 class="h2">Itens em {{diaLongo}}</h2>
+          <span class="sub">Mudar um preço vale para as próximas vendas deste dia. Vendas já feitas mantêm o preço delas.</span>
+        </div>
+        <span class="sub">{{resumo}}</span>
+      </div>
+      <div class="item-head" aria-hidden="true">
+        <span>Item</span>
+        <span>Preço neste dia</span>
+        <span>Vendidos</span>
+        <span>No cardápio do dia</span>
+      </div>
+      <sc-for list="{{itens}}" as="i" hint-placeholder-count="2">
+        <div class="item-row" style="{{i.rowStyle}}">
+          <div style="display: flex; align-items: center; gap: 12px; min-width: 0">
+            <span style="width: 34px; height: 34px; flex: none; border-radius: 8px; border: 1px solid var(--line); background: var(--sub); display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 600">{{i.sigla}}</span>
+            <div style="display: flex; flex-direction: column; line-height: 1.3; min-width: 0">
+              <strong style="font-weight: 600">{{i.nome}}</strong>
+              <span class="sub">Preço padrão {{i.padrao}}</span>
+            </div>
+          </div>
+          <div style="display: flex; align-items: center; gap: 8px">
+            <sc-if value="{{i.lendo}}" hint-placeholder-val="{{true}}">
+              <strong style="font-weight: 600; min-width: 64px">{{i.preco}}</strong>
+              <sc-if value="{{i.mudou}}" hint-placeholder-val="{{false}}">
+                <span style="font-size: 11px; color: var(--accent); background: var(--accent-soft); border-radius: 6px; padding: 1px 7px">diferente do padrão</span>
+              </sc-if>
+              <button type="button" onClick="{{i.editar}}" aria-label="{{i.ariaEditar}}" style="width: 28px; height: 28px; border-radius: 7px; border: 1px solid var(--line-2); background: var(--bg); color: var(--text-2); display: inline-flex; align-items: center; justify-content: center">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"></path><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"></path></svg>
+              </button>
+            </sc-if>
+            <sc-if value="{{i.editando}}" hint-placeholder-val="{{false}}">
+              <div class="field" style="width: 96px; height: 30px">
+                <span class="sub">R$</span>
+                <label for="preco-dia" style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0)">Novo preço</label>
+                <input id="preco-dia" type="text" inputmode="decimal" value="{{i.rascunho}}" onChange="{{i.digitar}}" style="font-weight: 600">
+              </div>
+              <button type="button" onClick="{{i.salvar}}" style="height: 30px; padding: 0 10px; border-radius: 7px; border: 0; background: var(--primary); color: var(--on-primary); font-size: 12px">Salvar</button>
+              <button type="button" onClick="{{i.cancelar}}" aria-label="Cancelar" style="width: 26px; height: 30px; border: 0; background: transparent; color: var(--muted); font-size: 14px">×</button>
+            </sc-if>
+          </div>
+          <span class="col-vendidos" style="color: var(--text-2)">{{i.vendidos}}</span>
+          <button type="button" class="switch" role="switch" aria-checked="{{i.ativo}}" onClick="{{i.alternar}}" aria-label="{{i.ariaAtivo}}">
+            <span style="{{i.trilho}}"><span style="{{i.bolinha}}"></span></span>
+            {{i.rotuloAtivo}}
+          </button>
+        </div>
+      </sc-for>
+    </section>
+  </main>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1040}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = {
+      dia: '15nov',
+      editando: null,
+      rascunho: '',
+      novoAberto: false,
+      novoNome: '',
+      novoPreco: '',
+      produtos: [
+        { id: 'espeto', nome: 'Espeto de carne', padrao: 12 },
+        { id: 'refri', nome: 'Refrigerante lata', padrao: 6 }
+      ],
+      precos: {
+        '15nov': { espeto: 12, refri: 6 },
+        '01nov': { espeto: 12, refri: 6 },
+        '18out': { espeto: 10 }
+      }
+    };
+  }
+  renderVals() {
+    const DIAS = {
+      '15nov': { label: '15 nov · próximo', longo: '15 de novembro' },
+      '01nov': { label: '01 nov', longo: '1 de novembro' },
+      '18out': { label: '18 out', longo: '18 de outubro' }
+    };
+    const VENDIDOS = { '01nov': { espeto: 6 }, '18out': { espeto: 22 }, '15nov': {} };
+    const num = (t) => { const n = Number(String(t).replace(',', '.').replace(/[^0-9.]/g, '')); return Number.isFinite(n) ? n : 0; };
+    const brl = (n) => 'R$ ' + n.toLocaleString('pt-BR', { minimumFractionDigits: n % 1 ? 2 : 0, maximumFractionDigits: 2 });
+    const s = this.state;
+    const precosDia = s.precos[s.dia] || {};
+    const tab = 'height: 30px; padding: 0 12px; border-radius: 7px; border: 0; font-size: 12px; white-space: nowrap; ';
+    const setPrecos = (novo) => ({ precos: { ...s.precos, [s.dia]: novo } });
+    const ativos = s.produtos.filter((p) => precosDia[p.id] !== undefined).length;
+    return {
+      abas: Object.keys(DIAS).map((id) => ({
+        label: DIAS[id].label,
+        on: s.dia === id,
+        pick: () => this.setState({ dia: id, editando: null }),
+        style: tab + (s.dia === id ? 'background: var(--bg); color: var(--text); box-shadow: var(--shadow); font-weight: 600' : 'background: transparent; color: var(--muted)')
+      })),
+      diaLongo: DIAS[s.dia].longo,
+      resumo: ativos + ' de ' + s.produtos.length + ' itens à venda neste dia',
+      novoAberto: s.novoAberto,
+      abrirNovo: () => this.setState({ novoAberto: true }),
+      fecharNovo: () => this.setState({ novoAberto: false, novoNome: '', novoPreco: '' }),
+      novoNome: s.novoNome,
+      novoPreco: s.novoPreco,
+      digitarNome: (e) => this.setState({ novoNome: e.target.value }),
+      digitarPreco: (e) => this.setState({ novoPreco: e.target.value }),
+      salvarNovo: () => {
+        const nome = s.novoNome.trim();
+        const preco = num(s.novoPreco);
+        if (!nome || preco <= 0) return;
+        const id = 'item' + (s.produtos.length + 1);
+        this.setState({
+          novoAberto: false, novoNome: '', novoPreco: '',
+          produtos: s.produtos.concat([{ id, nome, padrao: preco }]),
+          precos: { ...s.precos, [s.dia]: { ...precosDia, [id]: preco } }
+        });
+      },
+      itens: s.produtos.map((p) => {
+        const ativo = precosDia[p.id] !== undefined;
+        const preco = ativo ? precosDia[p.id] : p.padrao;
+        const vendidos = (VENDIDOS[s.dia] || {})[p.id] || 0;
+        return {
+          nome: p.nome,
+          sigla: p.nome.split(' ').filter((w) => w.length > 2).map((w) => w[0]).join('').slice(0, 2).toUpperCase(),
+          padrao: brl(p.padrao),
+          preco: ativo ? brl(preco) : '—',
+          mudou: ativo && preco !== p.padrao,
+          vendidos: vendidos + (vendidos === 1 ? ' vendido' : ' vendidos'),
+          lendo: s.editando !== p.id,
+          editando: s.editando === p.id,
+          rascunho: s.rascunho,
+          ariaEditar: 'Mudar o preço de ' + p.nome + ' neste dia',
+          editar: () => this.setState({ editando: p.id, rascunho: String(preco).replace('.', ',') }),
+          digitar: (e) => this.setState({ rascunho: e.target.value }),
+          cancelar: () => this.setState({ editando: null }),
+          salvar: () => {
+            const novo = num(s.rascunho);
+            if (novo <= 0) return this.setState({ editando: null });
+            this.setState({ editando: null, ...setPrecos({ ...precosDia, [p.id]: novo }) });
+          },
+          ativo,
+          rotuloAtivo: ativo ? 'À venda' : 'Fora',
+          ariaAtivo: (ativo ? 'Tirar ' : 'Colocar ') + p.nome + (ativo ? ' do' : ' no') + ' cardápio deste dia',
+          alternar: () => {
+            const novo = { ...precosDia };
+            if (ativo) delete novo[p.id]; else novo[p.id] = p.padrao;
+            this.setState(setPrecos(novo));
+          },
+          trilho: 'position: relative; width: 34px; height: 20px; border-radius: 99px; flex: none; transition: background .15s; background: ' + (ativo ? 'var(--accent-fill)' : 'var(--line-2)'),
+          bolinha: 'position: absolute; top: 2px; width: 16px; height: 16px; border-radius: 99px; background: #FFFFFF; box-shadow: 0 1px 2px rgba(0,0,0,.2); transition: left .15s; left: ' + (ativo ? '16px' : '2px'),
+          rowStyle: ativo ? '' : 'opacity: .6'
+        };
+      })
+    };
+  }
+}
+</script>
+</body>
+</html>

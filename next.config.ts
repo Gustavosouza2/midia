@@ -10,7 +10,7 @@ const nextConfig: NextConfig = {
       },
     },
   },
-  // O app é de uso interno da equipe: nenhuma página deve ser indexada.
+  // The app is for the team's internal use: no page should be indexed.
   async headers() {
     return [
       {

@@ -1,0 +1,2 @@
+ALTER TABLE "precos_do_dia" ADD COLUMN "quantidade" integer;--> statement-breakpoint
+ALTER TABLE "precos_do_dia" ADD CONSTRAINT "precos_do_dia_quantidade_check" CHECK ("precos_do_dia"."quantidade" >= 0);
