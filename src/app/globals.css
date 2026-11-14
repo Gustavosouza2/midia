@@ -1,36 +1,146 @@
 @import "tailwindcss";
+@import "tw-animate-css";
 
-/* Tokens do design (design/DESIGN.md): tema claro apenas, preto para ações, verde para dinheiro. */
+/* Tokens do design (design/DESIGN.md): tema claro apenas, preto para ações, verde para dinheiro.
+   Os nomes seguem o vocabulário do shadcn/ui, para que os componentes de src/componentes/ui
+   usem as cores do design sem ajuste. */
 @theme {
-  --font-sans: "Geist Mono Variable", ui-monospace, SFMono-Regular, Menlo, monospace;
-  --color-page: #f2f2f3;
-  --color-bg: #ffffff;
-  --color-sub: #fafafa;
-  --color-hover: #f4f4f5;
-  --color-line: #ececee;
-  --color-line-2: #e2e2e5;
-  --color-text: #111113;
-  --color-text-2: #3f3f46;
-  --color-muted: #6b6b74;
+  --font-sans: "Poppins", ui-sans-serif, system-ui, sans-serif;
+
+  --color-page: #f2f2f3; /* fundo atrás da moldura */
+  --color-background: #ffffff; /* moldura, cards */
+  --color-foreground: #111113; /* texto principal */
+  --color-text-2: #3f3f46; /* texto secundário */
+  --color-muted: #fafafa; /* cabeçalhos de seção, campos, abas */
+  --color-muted-foreground: #6b6b74; /* rótulos, legendas */
+  --color-accent: #f4f4f5; /* hover, contadores */
+  --color-accent-foreground: #111113;
+  --color-border: #ececee; /* bordas e divisórias */
+  --color-input: #e2e2e5; /* bordas de botões e campos */
   --color-primary: #111113;
-  --color-on-primary: #ffffff;
-  --color-accent: #00716a;
-  --color-accent-fill: #359e95;
-  --color-accent-soft: #e6f4f2;
-  --color-warn: #b4400e;
-  --color-warn-soft: #fff1e8;
+  --color-primary-foreground: #ffffff;
+  --color-secondary: #f4f4f5;
+  --color-secondary-foreground: #111113;
+  --color-card: #ffffff;
+  --color-card-foreground: #111113;
+  --color-popover: #ffffff;
+  --color-popover-foreground: #111113;
+  --color-ring: #00716a;
+  --color-ok: #00716a; /* verde (texto): recebido, pago */
+  --color-ok-fill: #359e95; /* verde (preenchimento): barras, switches */
+  --color-ok-soft: #e6f4f2; /* fundo do selo "Pago" */
+  --color-warn: #b4400e; /* laranja: pendente */
+  --color-warn-soft: #fff1e8; /* fundo do selo "Pendente" */
+  --color-destructive: #b4400e;
   --shadow-float: 0 1px 2px rgba(17, 17, 19, 0.06), 0 8px 24px rgba(17, 17, 19, 0.06);
+
+  /* Pontos de quebra do DESIGN.md. Até 560px vale o layout de celular (barra de abas embaixo);
+     tablet: menu vira barra no topo; desk: menu lateral; wide: números em 4 colunas. */
+  --breakpoint-tablet: 35.0625rem; /* 561px */
+  --breakpoint-desk: 53.8125rem; /* 861px */
+  --breakpoint-wide: 73.8125rem; /* 1181px */
 }
 
 html {
   color-scheme: light;
 }
 
+/* Como no shadcn: borda sem cor explícita usa a cor de divisória. Fica na camada base
+   para que as classes de cor de borda (border-input, border-primary…) continuem valendo. */
+@layer base {
+  *,
+  ::before,
+  ::after {
+    border-color: var(--color-border);
+  }
+}
+
 body {
   background: var(--color-page);
-  color: var(--color-text);
+  color: var(--color-foreground);
   font-family: var(--font-sans);
   font-size: 13px;
   line-height: 1.5;
   font-variant-numeric: tabular-nums;
+}
+
+/* Movimento. Saída rápida, entrada mais suave e depois da saída, para o conteúdo novo
+   não disputar atenção com o velho. */
+:root {
+  --duracao-saida: 140ms;
+  --duracao-entrada: 220ms;
+  --duracao-movimento: 360ms;
+  --curva-suave: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@keyframes aparecer {
+  from {
+    opacity: 0;
+    filter: blur(2px);
+  }
+  to {
+    opacity: 1;
+    filter: blur(0);
+  }
+}
+
+@keyframes subir {
+  from {
+    transform: translateY(8px);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+/* A moldura (menu, cabeçalho, barra de abas) fica parada; só o conteúdo da tela anima. */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+}
+
+::view-transition {
+  pointer-events: none;
+}
+
+/* Trocar de tela pelo menu: o conteúdo velho some e o novo sobe um pouco ao entrar. */
+::view-transition-old(.tela) {
+  animation: var(--duracao-saida) ease-in both aparecer reverse;
+}
+
+::view-transition-new(.tela) {
+  animation:
+    var(--duracao-entrada) ease-out var(--duracao-saida) both aparecer,
+    var(--duracao-movimento) var(--curva-suave) var(--duracao-saida) both subir;
+}
+
+/* Trocar de dia ou período na mesma tela: só um cruzamento suave. */
+::view-transition-group(.troca) {
+  animation-duration: var(--duracao-movimento);
+  animation-timing-function: var(--curva-suave);
+}
+
+::view-transition-old(.troca) {
+  animation: var(--duracao-saida) ease-in both aparecer reverse;
+}
+
+::view-transition-new(.troca) {
+  animation: var(--duracao-entrada) ease-out both aparecer;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-old(*),
+  ::view-transition-new(*),
+  ::view-transition-group(*) {
+    animation-duration: 0s !important;
+    animation-delay: 0s !important;
+  }
+
+  *,
+  ::before,
+  ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }
