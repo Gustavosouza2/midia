@@ -1,9 +1,9 @@
-import type { DiaDeVenda } from "@/local-db";
+import type { SaleDay } from "@/local-db";
 import { Card } from "@/components/ui/card";
-import { diaPorExtenso, plural } from "@/lib/format";
-import { SeloDoDia } from "./day-badge";
+import { longDate, plural } from "@/lib/format";
+import { DayBadge } from "./day-badge";
 
-export function BoasVindas({ proximo, reservas }: { proximo: DiaDeVenda | null; reservas: number }) {
+export function Welcome({ upcoming, reservations }: { upcoming: SaleDay | null; reservations: number }) {
   return (
     <Card
       role="region"
@@ -19,15 +19,15 @@ export function BoasVindas({ proximo, reservas }: { proximo: DiaDeVenda | null; 
       </div>
 
       <div className="flex items-center gap-3 rounded-[10px] border border-border bg-muted px-3 py-2.5 tablet:gap-3.5 tablet:px-4 tablet:py-3">
-        <SeloDoDia data={proximo?.data} />
+        <DayBadge date={upcoming?.date} />
         <div className="flex flex-col leading-[1.35]">
           <span className="text-[11px] text-muted-foreground">Próximo dia de venda</span>
           <strong className="text-xs font-semibold tablet:text-[13px]">
-            {proximo ? diaPorExtenso(proximo.data) : "Nenhum dia marcado"}
+            {upcoming ? longDate(upcoming.date) : "Nenhum dia marcado"}
           </strong>
-          {proximo && (
+          {upcoming && (
             <span className="text-[11px] text-foreground">
-              {reservas ? plural(reservas, "reserva feita", "reservas feitas") : "Nenhuma reserva ainda"}
+              {reservations ? plural(reservations, "reserva feita", "reservas feitas") : "Nenhuma reserva ainda"}
             </span>
           )}
         </div>

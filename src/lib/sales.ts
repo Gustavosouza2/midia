@@ -1,234 +1,234 @@
-import type { FormaPagamento } from "@/local-db/writes";
-import type { Cliente, ItemPedido, Pagamento, Pedido, PrecoDoDia, Produto } from "@/local-db";
-import { estoqueDoDia } from "./stock";
-import { dataLocal, rotuloDia } from "./format";
+import type { PaymentMethod } from "@/local-db/writes";
+import type { Customer, OrderItem, Payment, Order, DayMenuItem, Product } from "@/local-db";
+import { dayStock } from "./stock";
+import { localDate, shortDate } from "./format";
 
-/** Tudo o que Vendas lê do banco local. */
-export type DadosVendas = {
-  pedidos: Pedido[];
-  itens: ItemPedido[];
-  pagamentos: Pagamento[];
-  produtos: Produto[];
-  clientes: Cliente[];
-  precosDoDia: PrecoDoDia[];
+/** Everything Sales reads from the local database. */
+export type SalesData = {
+  orders: Order[];
+  items: OrderItem[];
+  payments: Payment[];
+  products: Product[];
+  customers: Customer[];
+  dayMenuItems: DayMenuItem[];
 };
 
-/** Reserva = pedido ainda não entregue; os outros são pagos ou pendentes pelo que falta receber. */
-export type StatusPedido = "reservado" | "pendente" | "pago";
-export type FiltroStatus = "todos" | StatusPedido;
+/** Reservation = order not delivered yet; the others are paid or pending by what is left to receive. */
+export type OrderStatus = "reserved" | "pending" | "paid";
+export type StatusFilter = "all" | OrderStatus;
 
-export const POR_PAGINA = 6;
+export const PAGE_SIZE = 6;
 
-export type ItemDoCardapio = {
-  produtoId: string;
-  nome: string;
-  precoCentavos: number;
-  /** Quanto ainda dá para vender ou reservar no dia. Nulo = sem limite. */
-  restantes: number | null;
+export type MenuItem = {
+  productId: string;
+  name: string;
+  priceCents: number;
+  /** How much can still be sold or reserved on the day. Null = no limit. */
+  remaining: number | null;
 };
 
-export type PedidoDoDia = {
+export type DayOrder = {
   id: string;
-  nome: string;
-  /** "2× Espeto de carne", itens separados por vírgula. */
-  descricao: string;
-  quantidade: number;
-  valor: number;
-  /** Preço de cada item quando o pedido tem um item só. */
-  precoUnitario: number | null;
-  /** O que falta receber (0 quando pago). */
-  aberto: number;
-  status: StatusPedido;
-  /** Formas dos pagamentos não estornados, sem repetir. */
-  formas: FormaPagamento[];
-  /** Pagamentos não estornados: o que "Desfazer" estorna. */
-  pagamentosAtivos: string[];
-  criadoEm: string;
-  /** "20:15" para vendas; "reservou 08 nov" para reservas. Hora local do aparelho. */
-  hora: string;
+  name: string;
+  /** "2× Espeto de carne", items separated by commas. */
+  description: string;
+  quantity: number;
+  amount: number;
+  /** Price of each item when the order has a single item. */
+  unitPrice: number | null;
+  /** What is left to receive (0 when paid). */
+  due: number;
+  status: OrderStatus;
+  /** Methods of the non-refunded payments, without repeats. */
+  methods: PaymentMethod[];
+  /** Non-refunded payments: what "Desfazer" refunds. */
+  activePayments: string[];
+  createdAt: string;
+  /** "20:15" for sales; "reservou 08 nov" for reservations. The device's local time. */
+  time: string;
 };
 
-export type ColunaDoQuadro = { status: StatusPedido; pedidos: PedidoDoDia[]; total: number };
+export type BoardColumn = { status: OrderStatus; orders: DayOrder[]; total: number };
 
-export type TelaVendas = {
-  /** Itens à venda no dia, por nome. */
-  cardapio: ItemDoCardapio[];
-  numeros: {
-    itens: number;
-    vendido: number;
-    recebido: number;
-    pendente: number;
-    /** Pedidos vendidos com valor em aberto. */
-    pedidosPendentes: number;
-    reservas: number;
-    itensReservados: number;
-    valorReservas: number;
+export type SalesScreen = {
+  /** Items for sale on the day, by name. */
+  menu: MenuItem[];
+  stats: {
+    items: number;
+    sold: number;
+    received: number;
+    pending: number;
+    /** Sold orders with an outstanding amount. */
+    pendingOrders: number;
+    reservations: number;
+    reservedItems: number;
+    reservationsAmount: number;
   };
-  /** Quantos pedidos o dia tem, sem busca nem filtro. */
-  totalDoDia: number;
-  /** Pedidos com a busca e o filtro aplicados, do mais novo para o mais antigo. */
-  pedidos: PedidoDoDia[];
-  /** Quadro: Reservas → Pendentes → Pagos, só com a busca aplicada. */
-  quadro: ColunaDoQuadro[];
+  /** How many orders the day has, without search or filter. */
+  dayTotal: number;
+  /** Orders with the search and filter applied, newest first. */
+  orders: DayOrder[];
+  /** Board: Reservas → Pendentes → Pagos, with only the search applied. */
+  board: BoardColumn[];
 };
 
 /**
- * Monta a tela Vendas de um dia a partir das linhas do banco local.
- * Reservas não contam como vendidas (mesma regra do Painel). Recebido é limitado ao valor do pedido.
+ * Builds a day's Sales screen from the local database rows.
+ * Reservations do not count as sold (same rule as the Dashboard). Received is capped at the order amount.
  */
-export function montarVendas(
-  dados: DadosVendas,
-  diaId: string,
-  { busca = "", filtro = "todos" }: { busca?: string; filtro?: FiltroStatus } = {},
-): TelaVendas {
-  const produtoPorId = new Map(dados.produtos.map((p) => [p.id, p]));
-  const clientePorId = new Map(dados.clientes.map((c) => [c.id, c]));
+export function buildSales(
+  data: SalesData,
+  dayId: string,
+  { search = "", filter = "all" }: { search?: string; filter?: StatusFilter } = {},
+): SalesScreen {
+  const productById = new Map(data.products.map((p) => [p.id, p]));
+  const customerById = new Map(data.customers.map((c) => [c.id, c]));
 
-  const estoque = estoqueDoDia(dados, diaId);
-  const cardapio = dados.precosDoDia
-    .filter((p) => p.diaId === diaId && p.ativo && produtoPorId.get(p.produtoId)?.ativo)
+  const stock = dayStock(data, dayId);
+  const menu = data.dayMenuItems
+    .filter((p) => p.dayId === dayId && p.active && productById.get(p.productId)?.active)
     .map((p) => ({
-      produtoId: p.produtoId,
-      nome: produtoPorId.get(p.produtoId)!.nome,
-      precoCentavos: p.precoCentavos,
-      restantes: estoque(p.produtoId).restantes,
+      productId: p.productId,
+      name: productById.get(p.productId)!.name,
+      priceCents: p.priceCents,
+      remaining: stock(p.productId).remaining,
     }))
-    .sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"));
+    .sort((a, b) => a.name.localeCompare(b.name, "pt-BR"));
 
-  const doDia = dados.pedidos.filter((p) => p.diaId === diaId && p.status !== "cancelado");
-  const ids = new Set(doDia.map((p) => p.id));
-  const itensPorPedido = agrupar(
-    dados.itens.filter((i) => !i.canceladoEm && ids.has(i.pedidoId)),
-    (i) => i.pedidoId,
+  const ofDay = data.orders.filter((p) => p.dayId === dayId && p.status !== "cancelado");
+  const ids = new Set(ofDay.map((p) => p.id));
+  const itemsByOrder = groupBy(
+    data.items.filter((i) => !i.canceledAt && ids.has(i.orderId)),
+    (i) => i.orderId,
   );
-  const pagamentosPorPedido = agrupar(
-    dados.pagamentos.filter((p) => !p.estornadoEm && ids.has(p.pedidoId)),
-    (p) => p.pedidoId,
+  const paymentsByOrder = groupBy(
+    data.payments.filter((p) => !p.refundedAt && ids.has(p.orderId)),
+    (p) => p.orderId,
   );
 
-  const todos = doDia
-    .map((p): PedidoDoDia => {
-      const itens = itensPorPedido.get(p.id) ?? [];
-      const pagamentos = pagamentosPorPedido.get(p.id) ?? [];
-      const valor = somar(itens, (i) => i.quantidade * i.precoUnitarioCentavos);
-      const recebido = Math.min(somar(pagamentos, (pg) => pg.valorCentavos), valor);
-      const reserva = p.status === "recebido";
+  const all = ofDay
+    .map((p): DayOrder => {
+      const items = itemsByOrder.get(p.id) ?? [];
+      const payments = paymentsByOrder.get(p.id) ?? [];
+      const amount = sumBy(items, (i) => i.quantity * i.unitPriceCents);
+      const received = Math.min(sumBy(payments, (pg) => pg.amountCents), amount);
+      const reservation = p.status === "recebido";
       return {
         id: p.id,
-        nome: (p.clienteId && clientePorId.get(p.clienteId)?.nome) || "Sem nome",
-        descricao: itens.map((i) => `${i.quantidade}× ${produtoPorId.get(i.produtoId)?.nome ?? "Item"}`).join(", "),
-        quantidade: somar(itens, (i) => i.quantidade),
-        valor,
-        precoUnitario: itens.length === 1 ? itens[0].precoUnitarioCentavos : null,
-        aberto: valor - recebido,
-        status: reserva ? "reservado" : valor - recebido > 0 ? "pendente" : "pago",
-        formas: [...new Set(pagamentos.map((pg) => pg.forma))],
-        pagamentosAtivos: pagamentos.map((pg) => pg.id),
-        criadoEm: p.criadoEm,
-        hora: reserva ? `reservou ${rotuloDia(dataLocal(p.criadoEm))}` : horaLocal(p.criadoEm),
+        name: (p.customerId && customerById.get(p.customerId)?.name) || "Sem nome",
+        description: items.map((i) => `${i.quantity}× ${productById.get(i.productId)?.name ?? "Item"}`).join(", "),
+        quantity: sumBy(items, (i) => i.quantity),
+        amount,
+        unitPrice: items.length === 1 ? items[0].unitPriceCents : null,
+        due: amount - received,
+        status: reservation ? "reserved" : amount - received > 0 ? "pending" : "paid",
+        methods: [...new Set(payments.map((pg) => pg.method))],
+        activePayments: payments.map((pg) => pg.id),
+        createdAt: p.createdAt,
+        time: reservation ? `reservou ${shortDate(localDate(p.createdAt))}` : localTime(p.createdAt),
       };
     })
-    .sort((a, b) => b.criadoEm.localeCompare(a.criadoEm));
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
 
-  const vendidos = todos.filter((p) => p.status !== "reservado");
-  const reservas = todos.filter((p) => p.status === "reservado");
-  const vendido = somar(vendidos, (p) => p.valor);
-  const pendente = somar(vendidos, (p) => p.aberto);
+  const soldOrders = all.filter((p) => p.status !== "reserved");
+  const reservations = all.filter((p) => p.status === "reserved");
+  const sold = sumBy(soldOrders, (p) => p.amount);
+  const pending = sumBy(soldOrders, (p) => p.due);
 
-  const termo = normalizar(busca);
-  const buscados = termo ? todos.filter((p) => normalizar(p.nome).includes(termo)) : todos;
-  const quadro = (["reservado", "pendente", "pago"] as const).map((status): ColunaDoQuadro => {
-    const pedidos = buscados.filter((p) => p.status === status);
-    return { status, pedidos, total: somar(pedidos, (p) => (status === "pendente" ? p.aberto : p.valor)) };
+  const term = normalize(search);
+  const matching = term ? all.filter((p) => normalize(p.name).includes(term)) : all;
+  const board = (["reserved", "pending", "paid"] as const).map((status): BoardColumn => {
+    const orders = matching.filter((p) => p.status === status);
+    return { status, orders, total: sumBy(orders, (p) => (status === "pending" ? p.due : p.amount)) };
   });
 
   return {
-    cardapio,
-    numeros: {
-      itens: somar(vendidos, (p) => p.quantidade),
-      vendido,
-      recebido: vendido - pendente,
-      pendente,
-      pedidosPendentes: vendidos.filter((p) => p.status === "pendente").length,
-      reservas: reservas.length,
-      itensReservados: somar(reservas, (p) => p.quantidade),
-      valorReservas: somar(reservas, (p) => p.valor),
+    menu,
+    stats: {
+      items: sumBy(soldOrders, (p) => p.quantity),
+      sold,
+      received: sold - pending,
+      pending,
+      pendingOrders: soldOrders.filter((p) => p.status === "pending").length,
+      reservations: reservations.length,
+      reservedItems: sumBy(reservations, (p) => p.quantity),
+      reservationsAmount: sumBy(reservations, (p) => p.amount),
     },
-    totalDoDia: todos.length,
-    pedidos: filtro === "todos" ? buscados : buscados.filter((p) => p.status === filtro),
-    quadro,
+    dayTotal: all.length,
+    orders: filter === "all" ? matching : matching.filter((p) => p.status === filter),
+    board,
   };
 }
 
-export type Pagina<T> = {
-  itens: T[];
-  /** Página atual, limitada entre 1 e o total. */
-  pagina: number;
-  totalPaginas: number;
+export type Paged<T> = {
+  items: T[];
+  /** Current page, clamped between 1 and the total. */
+  page: number;
+  totalPages: number;
   /** "Mostrando 1–6 de 12". */
-  faixa: string;
+  range: string;
 };
 
-export function paginar<T>(lista: T[], pagina: number, porPagina = POR_PAGINA): Pagina<T> {
-  const totalPaginas = Math.max(1, Math.ceil(lista.length / porPagina));
-  const atual = Math.min(Math.max(1, pagina), totalPaginas);
-  const inicio = (atual - 1) * porPagina;
-  const itens = lista.slice(inicio, inicio + porPagina);
+export function paginate<T>(list: T[], page: number, perPage = PAGE_SIZE): Paged<T> {
+  const totalPages = Math.max(1, Math.ceil(list.length / perPage));
+  const current = Math.min(Math.max(1, page), totalPages);
+  const start = (current - 1) * perPage;
+  const items = list.slice(start, start + perPage);
   return {
-    itens,
-    pagina: atual,
-    totalPaginas,
-    faixa: lista.length ? `Mostrando ${inicio + 1}–${inicio + itens.length} de ${lista.length}` : "Nenhum pedido",
+    items,
+    page: current,
+    totalPages,
+    range: list.length ? `Mostrando ${start + 1}–${start + items.length} de ${list.length}` : "Nenhum pedido",
   };
 }
 
-/** "12" ou "12,50", para o campo Preço un. */
-export function textoDoPreco(centavos: number): string {
-  const reais = Math.floor(centavos / 100);
-  const resto = centavos % 100;
-  return resto ? `${reais},${String(resto).padStart(2, "0")}` : String(reais);
+/** "12" or "12,50", for the Preço un. input. */
+export function formatPriceInput(cents: number): string {
+  const reais = Math.floor(cents / 100);
+  const remainder = cents % 100;
+  return remainder ? `${reais},${String(remainder).padStart(2, "0")}` : String(reais);
 }
 
-/** Lê o que foi digitado em Preço un. ("12", "12,5", "12.50"). Inválido = null. */
-export function lerPreco(texto: string): number | null {
-  const limpo = texto.trim().replace(",", ".");
-  if (!/^\d+(\.\d{0,2})?$/.test(limpo)) return null;
-  return Math.round(Number(limpo) * 100);
+/** Reads what was typed in Preço un. ("12", "12,5", "12.50"). Invalid = null. */
+export function parsePrice(text: string): number | null {
+  const clean = text.trim().replace(",", ".");
+  if (!/^\d+(\.\d{0,2})?$/.test(clean)) return null;
+  return Math.round(Number(clean) * 100);
 }
 
-const ROTULO_DA_FORMA: Record<FormaPagamento, string> = { pix: "Pix", dinheiro: "Dinheiro" };
+const METHOD_LABEL: Record<PaymentMethod, string> = { pix: "Pix", dinheiro: "Dinheiro" };
 
-/** "Pago · Pix", "Pago · Pix + Dinheiro" ou só "Pago". */
-export function rotuloPago(formas: FormaPagamento[]): string {
-  return formas.length ? `Pago · ${formas.map((f) => ROTULO_DA_FORMA[f]).join(" + ")}` : "Pago";
+/** "Pago · Pix", "Pago · Pix + Dinheiro" or just "Pago". */
+export function paidLabel(methods: PaymentMethod[]): string {
+  return methods.length ? `Pago · ${methods.map((f) => METHOD_LABEL[f]).join(" + ")}` : "Pago";
 }
 
-function normalizar(texto: string): string {
-  return texto
+function normalize(text: string): string {
+  return text
     .normalize("NFD")
     .replace(/\p{Diacritic}/gu, "")
     .toLocaleLowerCase("pt-BR")
     .trim();
 }
 
-const doisDigitos = (n: number) => String(n).padStart(2, "0");
+const twoDigits = (n: number) => String(n).padStart(2, "0");
 
-function horaLocal(iso: string): string {
+function localTime(iso: string): string {
   const d = new Date(iso);
-  return `${doisDigitos(d.getHours())}:${doisDigitos(d.getMinutes())}`;
+  return `${twoDigits(d.getHours())}:${twoDigits(d.getMinutes())}`;
 }
 
-function somar<T>(lista: T[], valor: (item: T) => number): number {
-  return lista.reduce((soma, item) => soma + valor(item), 0);
+function sumBy<T>(list: T[], amount: (item: T) => number): number {
+  return list.reduce((sum, item) => sum + amount(item), 0);
 }
 
-function agrupar<T>(lista: T[], chave: (item: T) => string): Map<string, T[]> {
-  const mapa = new Map<string, T[]>();
-  for (const item of lista) {
-    const k = chave(item);
-    const grupo = mapa.get(k);
-    if (grupo) grupo.push(item);
-    else mapa.set(k, [item]);
+function groupBy<T>(list: T[], key: (item: T) => string): Map<string, T[]> {
+  const map = new Map<string, T[]>();
+  for (const item of list) {
+    const k = key(item);
+    const group = map.get(k);
+    if (group) group.push(item);
+    else map.set(k, [item]);
   }
-  return mapa;
+  return map;
 }

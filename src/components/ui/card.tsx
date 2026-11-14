@@ -1,8 +1,8 @@
 import * as React from "react";
 import { cn } from "cn";
 
-// Card do DESIGN.md: raio 12px, borda `border`, sem sombra. O conteúdo de linhas com
-// divisória (listas) vai direto no Card; CardContent é para conteúdo com respiro.
+// DESIGN.md card: 12px radius, `border` border, no shadow. Content made of rows with
+// dividers (lists) goes straight into Card; CardContent is for padded content.
 
 function Card({ className, ...props }: React.ComponentProps<"div">) {
   return (

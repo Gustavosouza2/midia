@@ -1,6 +1,6 @@
-import { listrado } from "./striped";
+import { striped } from "./striped";
 
-export function Legenda() {
+export function Legend() {
   return (
     <div className="flex gap-3.5 text-[11px] text-muted-foreground">
       <span className="inline-flex items-center gap-1.5">
@@ -8,7 +8,7 @@ export function Legenda() {
         Recebido
       </span>
       <span className="inline-flex items-center gap-1.5">
-        <i className="size-2.5 rounded-xs" style={listrado} />
+        <i className="size-2.5 rounded-xs" style={striped} />
         Pendente
       </span>
     </div>

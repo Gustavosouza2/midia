@@ -3,23 +3,23 @@
 import { SerwistProvider } from "@serwist/turbopack/react";
 import { useEffect, type ReactNode } from "react";
 
-// Em `next dev` o service worker serviria o HTML guardado de "/" e "/~offline", o hot reload
-// acharia a página desatualizada e recarregaria sem parar. Ele só existe no build de produção.
-const emDesenvolvimento = process.env.NODE_ENV === "development";
+// In `next dev` the service worker would serve the cached HTML of "/" and "/~offline", hot reload
+// would find the page stale and reload forever. It only exists in the production build.
+const isDevelopment = process.env.NODE_ENV === "development";
 
-/** Registra o service worker e pede armazenamento persistente para o IndexedDB não ser apagado. */
+/** Registers the service worker and asks for persistent storage so IndexedDB is not evicted. */
 export function Pwa({ children }: { children: ReactNode }) {
   useEffect(() => {
     navigator.storage?.persist?.().catch(() => {
-      // Alguns navegadores recusam sem perguntar; o app continua funcionando.
+      // Some browsers refuse without asking; the app keeps working.
     });
-    if (emDesenvolvimento) {
-      void navigator.serviceWorker?.getRegistrations().then((registros) => registros.forEach((r) => r.unregister()));
+    if (isDevelopment) {
+      void navigator.serviceWorker?.getRegistrations().then((records) => records.forEach((r) => r.unregister()));
     }
   }, []);
 
   return (
-    <SerwistProvider swUrl="/serwist/sw.js" disable={emDesenvolvimento}>
+    <SerwistProvider swUrl="/serwist/sw.js" disable={isDevelopment}>
       {children}
     </SerwistProvider>
   );

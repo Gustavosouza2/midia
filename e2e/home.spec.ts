@@ -1,14 +1,14 @@
 import { expect, test } from "@playwright/test";
 
-test("a home abre direto no Painel", async ({ page }) => {
+test("the home page opens straight on the Dashboard", async ({ page }) => {
   await page.goto("/");
   await expect(page.getByRole("heading", { name: "Painel da Cantina" })).toBeVisible();
 });
 
-test("depois de uma visita, a home abre sem internet", async ({ page, context }) => {
+test("after one visit, the home page opens without internet", async ({ page, context }) => {
   await page.goto("/");
 
-  // Espera o service worker assumir a página (é ele que guarda o app shell).
+  // Waits for the service worker to take over the page (it is what stores the app shell).
   await page.evaluate(async () => {
     await navigator.serviceWorker.ready;
     if (!navigator.serviceWorker.controller) {

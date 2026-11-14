@@ -1,17 +1,17 @@
-import type { Cantina, CantinaLocalDb } from "./index";
+import type { Canteen, CanteenLocalDb } from "./index";
 
 /**
- * Traz a cantina do servidor para o aparelho. As escritas locais precisam dela (cantina_id).
- * É dado do servidor, então não passa pela outbox. Sem rede ou sem resposta válida, não faz nada.
+ * Brings the canteen from the server to the device. Local writes need it (cantina_id).
+ * It is server data, so it does not go through the outbox. With no network or no valid response, it does nothing.
  */
-export async function baixarCantina(db: CantinaLocalDb): Promise<void> {
+export async function downloadCanteen(db: CanteenLocalDb): Promise<void> {
   try {
-    const resposta = await fetch("/api/cantina");
-    if (!resposta.ok) return;
-    const { cantina } = (await resposta.json()) as { cantina?: Cantina };
-    if (typeof cantina?.id !== "string") return;
-    await db.cantinas.put(cantina);
+    const response = await fetch("/api/canteen");
+    if (!response.ok) return;
+    const { canteen } = (await response.json()) as { canteen?: Canteen };
+    if (typeof canteen?.id !== "string") return;
+    await db.canteens.put(canteen);
   } catch {
-    // Offline ou servidor fora do ar: tenta de novo na próxima abertura do app.
+    // Offline or server down: tries again the next time the app opens.
   }
 }

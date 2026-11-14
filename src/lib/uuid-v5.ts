@@ -1,19 +1,19 @@
 /**
- * UUID v5 (RFC 9562): id determinístico a partir de um namespace e um nome, com SHA-1.
- * Usa crypto.subtle, que existe no navegador e no Node 22. É assíncrono: dentro de uma
- * transação do Dexie, calcule o id antes de abrir a transação.
+ * UUID v5 (RFC 9562): deterministic id from a namespace and a name, with SHA-1.
+ * Uses crypto.subtle, which exists in the browser and in Node 22. It is async: inside a
+ * Dexie transaction, compute the id before opening the transaction.
  */
-export async function uuidV5(nome: string, namespace: string): Promise<string> {
+export async function uuidV5(name: string, namespace: string): Promise<string> {
   const ns = namespace.replace(/-/g, "");
-  if (!/^[0-9a-f]{32}$/i.test(ns)) throw new Error(`Namespace inválido: ${namespace}`);
+  if (!/^[0-9a-f]{32}$/i.test(ns)) throw new Error(`Invalid namespace: ${namespace}`);
 
-  const nsBytes = Uint8Array.from(ns.match(/../g)!, (par) => parseInt(par, 16));
-  const nomeBytes = new TextEncoder().encode(nome);
-  const entrada = new Uint8Array(nsBytes.length + nomeBytes.length);
-  entrada.set(nsBytes);
-  entrada.set(nomeBytes, nsBytes.length);
+  const nsBytes = Uint8Array.from(ns.match(/../g)!, (pair) => parseInt(pair, 16));
+  const nameBytes = new TextEncoder().encode(name);
+  const input = new Uint8Array(nsBytes.length + nameBytes.length);
+  input.set(nsBytes);
+  input.set(nameBytes, nsBytes.length);
 
-  const hash = new Uint8Array(await crypto.subtle.digest("SHA-1", entrada)).slice(0, 16);
+  const hash = new Uint8Array(await crypto.subtle.digest("SHA-1", input)).slice(0, 16);
   hash[6] = (hash[6] & 0x0f) | 0x50;
   hash[8] = (hash[8] & 0x3f) | 0x80;
 

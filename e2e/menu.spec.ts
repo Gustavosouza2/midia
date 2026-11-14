@@ -1,74 +1,74 @@
 import { expect, test, type Page } from "@playwright/test";
 import { uuidV5 } from "../src/lib/uuid-v5";
-import { data, gravarNoBancoLocal, id, lerTabela, linha } from "./local-db";
-import { filtroDeDia, rotuloDoFiltro } from "./day-filter";
+import { date, writeLocalDb, id, readTable, row } from "./local-db";
+import { dayFilter, filterLabel } from "./day-filter";
 
-// page.route não enxerga pedidos que passam pelo service worker.
+// page.route does not see requests that go through the service worker.
 test.use({ serviceWorkers: "block" });
 
-const ESPETO = id(1);
-const REFRI = id(2);
-const DIA = id(10);
+const SKEWER = id(1);
+const SODA = id(2);
+const DAY = id(10);
 
-type ItemOutbox = { tabela: string; registroId: string; payload: Record<string, unknown> };
-type Produto = { id: string; nome: string; precoCentavos: number };
-type PrecoDoDia = { id: string; diaId: string; produtoId: string; precoCentavos: number; ativo: boolean };
+type OutboxItem = { table: string; recordId: string; payload: Record<string, unknown> };
+type Product = { id: string; name: string; priceCents: number };
+type DayMenuItem = { id: string; dayId: string; productId: string; priceCents: number; active: boolean };
 
-async function abrirCardapio(page: Page) {
-  // A cantina vem dos dados de teste, não do servidor.
-  await page.route("**/api/cantina", (rota) => rota.fulfill({ status: 500, json: { erro: "fora do ar" } }));
-  await page.goto("/cardapio");
+async function openMenu(page: Page) {
+  // The canteen comes from the test data, not from the server.
+  await page.route("**/api/canteen", (route) => route.fulfill({ status: 500, json: { error: "server down" } }));
+  await page.goto("/menu");
   await expect(page.getByRole("heading", { name: "Cardápio", level: 1 })).toBeVisible();
 }
 
-/** Espeto e Refrigerante à venda no dia; Bolo cadastrado, mas fora. 3 espetos vendidos e 5 cancelados. */
-async function gravarCardapio(page: Page) {
-  const precoId = (produtoId: string) => uuidV5(produtoId, DIA);
-  await gravarNoBancoLocal(page, {
-    cantinas: [linha.cantina()],
-    produtos: [
-      linha.produto(1, "Espeto de carne", 1200),
-      linha.produto(2, "Refrigerante lata", 600),
-      linha.produto(3, "Bolo", 500),
-      linha.produto(4, "Item antigo", 100, false),
+/** Espeto and Refrigerante for sale on the day; Bolo registered, but off the menu. 3 skewers sold and 5 canceled. */
+async function saveMenu(page: Page) {
+  const dayMenuItemId = (productId: string) => uuidV5(productId, DAY);
+  await writeLocalDb(page, {
+    canteens: [row.canteen()],
+    products: [
+      row.product(1, "Espeto de carne", 1200),
+      row.product(2, "Refrigerante lata", 600),
+      row.product(3, "Bolo", 500),
+      row.product(4, "Item antigo", 100, false),
     ],
-    diasDeVenda: [linha.dia(10, data(3))],
-    precosDoDia: [
-      { ...linha.precoDoDia(0, DIA, ESPETO, 1200), id: await precoId(ESPETO) },
-      { ...linha.precoDoDia(0, DIA, REFRI, 600), id: await precoId(REFRI) },
+    saleDays: [row.day(10, date(3))],
+    dayMenuItems: [
+      { ...row.dayMenuItem(0, DAY, SKEWER, 1200), id: await dayMenuItemId(SKEWER) },
+      { ...row.dayMenuItem(0, DAY, SODA, 600), id: await dayMenuItemId(SODA) },
     ],
-    pedidos: [linha.pedido(30, DIA, null, "entregue"), { ...linha.pedido(31, DIA, null, "entregue"), status: "cancelado" }],
-    itensPedido: [linha.item(40, id(30), ESPETO, 3, 1200), linha.item(41, id(31), ESPETO, 5, 1200)],
+    orders: [row.order(30, DAY, null, "entregue"), { ...row.order(31, DAY, null, "entregue"), status: "cancelado" }],
+    orderItems: [row.item(40, id(30), SKEWER, 3, 1200), row.item(41, id(31), SKEWER, 5, 1200)],
   });
   await page.reload();
 }
 
-const linhaDo = (page: Page, nome: string) => page.getByRole("listitem").filter({ hasText: nome });
+const linhaDo = (page: Page, name: string) => page.getByRole("listitem").filter({ hasText: name });
 
-test("muda o preço e tira um item do cardápio do dia", async ({ page }) => {
-  await abrirCardapio(page);
-  await gravarCardapio(page);
+test("changes the price and takes an item off the day's menu", async ({ page }) => {
+  await openMenu(page);
+  await saveMenu(page);
 
-  const gatilho = filtroDeDia(page).gatilho;
-  await expect(gatilho).toContainText(rotuloDoFiltro(data(3)));
-  await expect(gatilho).toContainText("próximo");
+  const trigger = dayFilter(page).trigger;
+  await expect(trigger).toContainText(filterLabel(date(3)));
+  await expect(trigger).toContainText("próximo");
   await expect(page.getByRole("heading", { name: /^Itens em / })).toBeVisible();
   await expect(page.getByText("2 de 3 itens à venda")).toBeVisible();
   await expect(page.getByText("Item antigo")).toHaveCount(0);
 
-  const espeto = linhaDo(page, "Espeto de carne");
-  await expect(espeto.getByText("3 vendidos", { exact: true })).toBeVisible();
-  await expect(espeto.getByText("Preço padrão R$ 12")).toBeVisible();
-  // Sem linha no dia, o Bolo aparece com o preço padrão.
+  const skewer = linhaDo(page, "Espeto de carne");
+  await expect(skewer.getByText("3 vendidos", { exact: true })).toBeVisible();
+  await expect(skewer.getByText("Preço padrão R$ 12")).toBeVisible();
+  // With no row for the day, Bolo shows the default price.
   await expect(linhaDo(page, "Bolo").getByText("R$ 5", { exact: true })).toBeVisible();
 
   await page.getByRole("button", { name: "Mudar o preço de Espeto de carne neste dia" }).click();
-  const campo = espeto.getByRole("textbox", { name: "Novo preço" });
-  await expect(campo).toHaveValue("12");
-  await campo.fill("10,50");
-  await espeto.getByRole("button", { name: "Salvar" }).click();
-  await expect(espeto.getByText("R$ 10,50", { exact: true })).toBeVisible();
-  await expect(espeto.getByText("diferente do padrão")).toBeVisible();
+  const field = skewer.getByRole("textbox", { name: "Novo preço" });
+  await expect(field).toHaveValue("12");
+  await field.fill("10,50");
+  await skewer.getByRole("button", { name: "Salvar" }).click();
+  await expect(skewer.getByText("R$ 10,50", { exact: true })).toBeVisible();
+  await expect(skewer.getByText("diferente do padrão")).toBeVisible();
 
   await page.getByRole("switch", { name: "Tirar Refrigerante lata do cardápio deste dia" }).click();
   await expect(page.getByRole("switch", { name: "Colocar Refrigerante lata no cardápio deste dia" })).toHaveAttribute(
@@ -78,31 +78,31 @@ test("muda o preço e tira um item do cardápio do dia", async ({ page }) => {
   await expect(linhaDo(page, "Refrigerante lata").getByText("Fora")).toBeVisible();
   await expect(page.getByText("1 de 3 itens à venda")).toBeVisible();
 
-  const outbox = await lerTabela<ItemOutbox>(page, "outbox");
-  expect(outbox.map((o) => [o.tabela, o.registroId, o.payload.precoCentavos, o.payload.ativo])).toEqual([
-    ["precosDoDia", await uuidV5(ESPETO, DIA), 1050, true],
-    ["precosDoDia", await uuidV5(REFRI, DIA), 600, false],
+  const outbox = await readTable<OutboxItem>(page, "outbox");
+  expect(outbox.map((o) => [o.table, o.recordId, o.payload.priceCents, o.payload.active])).toEqual([
+    ["dayMenuItems", await uuidV5(SKEWER, DAY), 1050, true],
+    ["dayMenuItems", await uuidV5(SODA, DAY), 600, false],
   ]);
 });
 
-test("um preço inválido não é salvo", async ({ page }) => {
-  await abrirCardapio(page);
-  await gravarCardapio(page);
+test("an invalid price is not saved", async ({ page }) => {
+  await openMenu(page);
+  await saveMenu(page);
 
-  const espeto = linhaDo(page, "Espeto de carne");
+  const skewer = linhaDo(page, "Espeto de carne");
   await page.getByRole("button", { name: "Mudar o preço de Espeto de carne neste dia" }).click();
-  await espeto.getByRole("textbox", { name: "Novo preço" }).fill("doze");
-  await espeto.getByRole("button", { name: "Salvar" }).click();
-  await expect(espeto.getByRole("alert")).toHaveText("Preço inválido. Use reais, como 12 ou 12,50.");
+  await skewer.getByRole("textbox", { name: "Novo preço" }).fill("doze");
+  await skewer.getByRole("button", { name: "Salvar" }).click();
+  await expect(skewer.getByRole("alert")).toHaveText("Preço inválido. Use reais, como 12 ou 12,50.");
 
-  await espeto.getByRole("button", { name: "Cancelar" }).click();
-  await expect(espeto.getByText("R$ 12", { exact: true })).toBeVisible();
-  expect(await lerTabela(page, "outbox")).toEqual([]);
+  await skewer.getByRole("button", { name: "Cancelar" }).click();
+  await expect(skewer.getByText("R$ 12", { exact: true })).toBeVisible();
+  expect(await readTable(page, "outbox")).toEqual([]);
 });
 
-test("adiciona um item e já o põe à venda no dia aberto", async ({ page }) => {
-  await abrirCardapio(page);
-  await gravarCardapio(page);
+test("adds an item and puts it on sale on the open day", async ({ page }) => {
+  await openMenu(page);
+  await saveMenu(page);
 
   await page.getByRole("button", { name: "Adicionar item" }).click();
   const form = page.getByRole("form", { name: "Novo item" });
@@ -113,22 +113,22 @@ test("adiciona um item e já o põe à venda no dia aberto", async ({ page }) =>
   await expect(form.getByLabel("Nome do item")).toHaveValue("");
   await form.getByRole("button", { name: "Fechar" }).click();
   await expect(form).toBeHidden();
-  const pao = linhaDo(page, "Pão de queijo");
-  await expect(pao.getByText("R$ 4,50", { exact: true })).toBeVisible();
-  await expect(pao.getByRole("switch")).toHaveAttribute("aria-checked", "true");
+  const bread = linhaDo(page, "Pão de queijo");
+  await expect(bread.getByText("R$ 4,50", { exact: true })).toBeVisible();
+  await expect(bread.getByRole("switch")).toHaveAttribute("aria-checked", "true");
   await expect(page.getByText("3 de 4 itens à venda")).toBeVisible();
 
-  const produto = (await lerTabela<Produto>(page, "produtos")).find((p) => p.nome === "Pão de queijo");
-  expect(produto?.precoCentavos).toBe(450);
-  const precos = await lerTabela<PrecoDoDia>(page, "precosDoDia");
-  expect(precos.find((p) => p.produtoId === produto?.id)).toMatchObject({ diaId: DIA, precoCentavos: 450, ativo: true });
+  const product = (await readTable<Product>(page, "products")).find((p) => p.name === "Pão de queijo");
+  expect(product?.priceCents).toBe(450);
+  const prices = await readTable<DayMenuItem>(page, "dayMenuItems");
+  expect(prices.find((p) => p.productId === product?.id)).toMatchObject({ dayId: DAY, priceCents: 450, active: true });
 });
 
-test("sem nenhum dia, cria o primeiro e mostra os itens com o preço padrão", async ({ page }) => {
-  await abrirCardapio(page);
-  await gravarNoBancoLocal(page, {
-    cantinas: [linha.cantina()],
-    produtos: [linha.produto(1, "Espeto de carne", 1200), linha.produto(2, "Refrigerante lata", 600)],
+test("with no day, creates the first one and shows the items at the default price", async ({ page }) => {
+  await openMenu(page);
+  await writeLocalDb(page, {
+    canteens: [row.canteen()],
+    products: [row.product(1, "Espeto de carne", 1200), row.product(2, "Refrigerante lata", 600)],
   });
   await page.reload();
 
@@ -136,15 +136,15 @@ test("sem nenhum dia, cria o primeiro e mostra os itens com o preço padrão", a
   await page.getByRole("button", { name: "Criar dia de venda" }).click();
   await page.getByRole("button", { name: /^Criar dia · / }).click();
 
-  await expect(filtroDeDia(page).gatilho).toBeVisible();
+  await expect(dayFilter(page).trigger).toBeVisible();
   await expect(page.getByText("2 de 2 itens à venda")).toBeVisible();
   await expect(linhaDo(page, "Espeto de carne").getByText("R$ 12", { exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: "Remover dia" })).toBeVisible();
 });
 
-test("sem nenhum dia, o item adicionado aparece na lista com o preço padrão", async ({ page }) => {
-  await abrirCardapio(page);
-  await gravarNoBancoLocal(page, { cantinas: [linha.cantina()] });
+test("with no day, the added item appears in the list at the default price", async ({ page }) => {
+  await openMenu(page);
+  await writeLocalDb(page, { canteens: [row.canteen()] });
   await page.reload();
 
   await page.getByRole("button", { name: "Adicionar item" }).first().click();
@@ -156,23 +156,23 @@ test("sem nenhum dia, o item adicionado aparece na lista com o preço padrão", 
   await expect(linhaDo(page, "Pastel").getByText("R$ 8", { exact: true })).toBeVisible();
 });
 
-test.describe("no celular", () => {
+test.describe("on the phone", () => {
   test.use({ viewport: { width: 390, height: 844 } });
 
-  test("cartões com switch e preço do dia", async ({ page }) => {
-    await abrirCardapio(page);
-    await gravarCardapio(page);
+  test("cards with switch and day price", async ({ page }) => {
+    await openMenu(page);
+    await saveMenu(page);
 
-    const refri = linhaDo(page, "Refrigerante lata");
-    await expect(refri.getByText("0 vendidos · padrão R$ 6")).toBeVisible();
+    const soda = linhaDo(page, "Refrigerante lata");
+    await expect(soda.getByText("0 vendidos · padrão R$ 6")).toBeVisible();
     await page.getByRole("switch", { name: "Tirar Refrigerante lata do cardápio deste dia" }).click();
-    await expect(refri.getByRole("button", { name: /Mudar o preço/ })).toBeHidden();
+    await expect(soda.getByRole("button", { name: /Mudar o preço/ })).toBeHidden();
 
-    const espeto = linhaDo(page, "Espeto de carne");
-    await espeto.getByRole("button", { name: "Mudar o preço de Espeto de carne neste dia" }).click();
-    await espeto.getByRole("textbox", { name: "Novo preço" }).fill("15");
-    await espeto.getByRole("button", { name: "Salvar" }).click();
-    await expect(espeto.getByText("R$ 15", { exact: true })).toBeVisible();
+    const skewer = linhaDo(page, "Espeto de carne");
+    await skewer.getByRole("button", { name: "Mudar o preço de Espeto de carne neste dia" }).click();
+    await skewer.getByRole("textbox", { name: "Novo preço" }).fill("15");
+    await skewer.getByRole("button", { name: "Salvar" }).click();
+    await expect(skewer.getByText("R$ 15", { exact: true })).toBeVisible();
 
     await page.getByRole("button", { name: "Adicionar item" }).click();
     await page.getByLabel("Nome do item").fill("Água");

@@ -10,50 +10,50 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { getLocalDb } from "@/local-db";
-import { ErroDeEscrita, registrarPedido, type NovoPedido } from "@/local-db/writes";
-import { formatarBRL } from "@/lib/format";
-import { lerPreco, textoDoPreco, type ItemDoCardapio } from "@/lib/sales";
-import { Campo } from "./field";
+import { WriteError, placeOrder, type NewOrder } from "@/local-db/writes";
+import { formatBRL } from "@/lib/format";
+import { parsePrice, formatPriceInput, type MenuItem } from "@/lib/sales";
+import { Field } from "./field";
 
-const QTD_MAXIMA = 99;
+const MAX_QUANTITY = 99;
 
 /**
- * Nova venda ou reserva de um item. `linha`: o card de uma linha do desktop; `folha`: os campos
- * empilhados da folha do celular. Depois de registrar, limpa Quem e Qtd e mantém o item.
+ * New sale or reservation of one item. `row`: the single-row card on desktop; `sheet`: the fields
+ * stacked in the phone sheet. After submitting, clears Quem and Qtd and keeps the item.
  */
-export function FormularioDePedido({
-  diaId,
-  cardapio,
+export function OrderForm({
+  dayId,
+  menu,
   layout,
-  aoRegistrar,
+  onSubmitted,
 }: {
-  diaId: string;
-  cardapio: ItemDoCardapio[];
-  layout: "linha" | "folha";
-  aoRegistrar?: () => void;
+  dayId: string;
+  menu: MenuItem[];
+  layout: "row" | "sheet";
+  onSubmitted?: () => void;
 }) {
   const id = useId();
-  const nomeRef = useRef<HTMLInputElement>(null);
-  const [tipo, setTipo] = useState<NovoPedido["tipo"]>("venda");
-  const [nome, setNome] = useState("");
-  const [produtoId, setProdutoId] = useState<string | null>(null);
-  const [qtd, setQtd] = useState(1);
-  /** null = o preço do cardápio do dia. */
-  const [precoTexto, setPrecoTexto] = useState<string | null>(null);
-  const [pagamento, setPagamento] = useState<NovoPedido["pagamento"]>("pendente");
-  const [erro, setErro] = useState<string | null>(null);
-  const [salvando, setSalvando] = useState(false);
+  const nameRef = useRef<HTMLInputElement>(null);
+  const [type, setType] = useState<NewOrder["type"]>("sale");
+  const [name, setName] = useState("");
+  const [productId, setProductId] = useState<string | null>(null);
+  const [qty, setQty] = useState(1);
+  /** null = the price on the day's menu. */
+  const [priceText, setPriceText] = useState<string | null>(null);
+  const [payment, setPayment] = useState<NewOrder["payment"]>("pending");
+  const [error, setError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
 
-  const linha = layout === "linha";
+  const row = layout === "row";
   const item =
-    cardapio.find((i) => i.produtoId === produtoId) ?? cardapio.find((i) => i.restantes !== 0) ?? cardapio[0];
+    menu.find((i) => i.productId === productId) ?? menu.find((i) => i.remaining !== 0) ?? menu[0];
 
   if (!item) {
     return (
-      <Card className={cn("px-4 py-5 text-xs text-muted-foreground", !linha && "border-0 px-0 py-2")}>
+      <Card className={cn("px-4 py-5 text-xs text-muted-foreground", !row && "border-0 px-0 py-2")}>
         <p>
           Nenhum item à venda neste dia.{" "}
-          <Link transitionTypes={["tela"]} href="/cardapio" className="font-semibold text-foreground underline underline-offset-[3px]">
+          <Link transitionTypes={["screen"]} href="/menu" className="font-semibold text-foreground underline underline-offset-[3px]">
             Monte o cardápio do dia
           </Link>{" "}
           para registrar vendas.
@@ -62,145 +62,145 @@ export function FormularioDePedido({
     );
   }
 
-  // Qtd vai até o que resta do item no dia; trocar de item não estoura o limite do novo.
-  const maximo = Math.max(1, Math.min(QTD_MAXIMA, item.restantes ?? QTD_MAXIMA));
-  const quantidade = Math.min(qtd, maximo);
-  const texto = precoTexto ?? textoDoPreco(item.precoCentavos);
-  const preco = lerPreco(texto);
-  const total = preco === null ? null : preco * quantidade;
-  const reserva = tipo === "reserva";
-  const rotuloBotao = `${reserva ? "Reservar" : "Registrar"} · ${total === null ? "—" : formatarBRL(total)}`;
+  // Qtd goes up to what remains of the item on the day; switching items does not exceed the new one's limit.
+  const max = Math.max(1, Math.min(MAX_QUANTITY, item.remaining ?? MAX_QUANTITY));
+  const quantity = Math.min(qty, max);
+  const text = priceText ?? formatPriceInput(item.priceCents);
+  const price = parsePrice(text);
+  const total = price === null ? null : price * quantity;
+  const reservation = type === "reservation";
+  const buttonLabel = `${reservation ? "Reservar" : "Registrar"} · ${total === null ? "—" : formatBRL(total)}`;
 
-  async function registrar(evento: FormEvent) {
-    evento.preventDefault();
-    if (preco === null) return setErro("Preço inválido.");
-    if (!nome.trim() && (reserva || pagamento === "pendente")) {
-      nomeRef.current?.focus();
-      return setErro(reserva ? "Diga quem reservou." : "Diga quem vai pagar depois.");
+  async function submit(event: FormEvent) {
+    event.preventDefault();
+    if (price === null) return setError("Preço inválido.");
+    if (!name.trim() && (reservation || payment === "pending")) {
+      nameRef.current?.focus();
+      return setError(reservation ? "Diga quem reservou." : "Diga quem vai pagar depois.");
     }
-    setSalvando(true);
-    setErro(null);
+    setSaving(true);
+    setError(null);
     try {
-      await registrarPedido(getLocalDb(), {
-        diaId,
-        nomeCliente: nome,
-        tipo,
-        produtoId: item.produtoId,
-        quantidade,
-        precoUnitarioCentavos: preco,
-        pagamento,
+      await placeOrder(getLocalDb(), {
+        dayId,
+        customerName: name,
+        type,
+        productId: item.productId,
+        quantity,
+        unitPriceCents: price,
+        payment,
       });
-      setNome("");
-      setQtd(1);
-      setPrecoTexto(null);
-      setPagamento("pendente");
-      nomeRef.current?.focus();
-      aoRegistrar?.();
+      setName("");
+      setQty(1);
+      setPriceText(null);
+      setPayment("pending");
+      nameRef.current?.focus();
+      onSubmitted?.();
     } catch (e) {
-      setErro(e instanceof ErroDeEscrita ? e.message : "Não foi possível registrar.");
+      setError(e instanceof WriteError ? e.message : "Não foi possível registrar.");
     } finally {
-      setSalvando(false);
+      setSaving(false);
     }
   }
 
-  const campo =
+  const fieldClass =
     "flex h-[42px] min-w-0 items-center rounded-[10px] border border-input bg-muted tablet:h-[38px] tablet:rounded-lg";
-  const segmento = "h-[34px] tablet:h-[30px]";
+  const segmentClass = "h-[34px] tablet:h-[30px]";
 
-  const campos = (
+  const fields = (
     <>
-      <Campo rotulo="Tipo" id={`${id}-tipo`}>
+      <Field label="Tipo" id={`${id}-type`}>
         <ToggleGroup
           type="single"
-          aria-labelledby={`${id}-tipo`}
-          value={tipo}
-          onValueChange={(v) => v && setTipo(v as typeof tipo)}
+          aria-labelledby={`${id}-type`}
+          value={type}
+          onValueChange={(v) => v && setType(v as typeof type)}
         >
-          <ToggleGroupItem value="venda" className={segmento}>
+          <ToggleGroupItem value="sale" className={segmentClass}>
             Venda
           </ToggleGroupItem>
-          <ToggleGroupItem value="reserva" className={segmento}>
+          <ToggleGroupItem value="reservation" className={segmentClass}>
             Reserva
           </ToggleGroupItem>
         </ToggleGroup>
-      </Campo>
+      </Field>
 
-      <div className={cn("flex min-w-0 flex-col gap-1", linha && "flex-[1_1_140px]")}>
-        <Label htmlFor={`${id}-nome`}>Quem</Label>
+      <div className={cn("flex min-w-0 flex-col gap-1", row && "flex-[1_1_140px]")}>
+        <Label htmlFor={`${id}-name`}>Quem</Label>
         <Input
-          ref={nomeRef}
-          id={`${id}-nome`}
+          ref={nameRef}
+          id={`${id}-name`}
           autoComplete="off"
           placeholder="Nome da pessoa"
-          value={nome}
-          onChange={(e) => setNome(e.target.value)}
+          value={name}
+          onChange={(e) => setName(e.target.value)}
           className="tablet:h-[38px]"
         />
       </div>
 
-      <div className={cn("flex min-w-0 flex-col gap-1", linha && "flex-[1_1_150px]")}>
+      <div className={cn("flex min-w-0 flex-col gap-1", row && "flex-[1_1_150px]")}>
         <Label htmlFor={`${id}-item`}>Item</Label>
         <select
           id={`${id}-item`}
-          value={item.produtoId}
+          value={item.productId}
           onChange={(e) => {
-            setProdutoId(e.target.value);
-            setPrecoTexto(null);
+            setProductId(e.target.value);
+            setPriceText(null);
           }}
           className={cn(
-            campo,
+            fieldClass,
             "px-2.5 text-sm text-foreground outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring tablet:text-xs",
           )}
         >
-          {cardapio.map((i) => (
-            <option key={i.produtoId} value={i.produtoId} disabled={i.restantes === 0}>
-              {i.nome} · {formatarBRL(i.precoCentavos)}
-              {i.restantes === 0 ? " · esgotado" : i.restantes !== null ? ` · restam ${i.restantes}` : ""}
+          {menu.map((i) => (
+            <option key={i.productId} value={i.productId} disabled={i.remaining === 0}>
+              {i.name} · {formatBRL(i.priceCents)}
+              {i.remaining === 0 ? " · esgotado" : i.remaining !== null ? ` · restam ${i.remaining}` : ""}
             </option>
           ))}
         </select>
       </div>
 
-      <div className={cn("grid grid-cols-2 gap-2.5", linha && "contents")}>
-        <Campo rotulo="Qtd" id={`${id}-qtd`}>
-          <div role="group" aria-labelledby={`${id}-qtd`} className={campo}>
+      <div className={cn("grid grid-cols-2 gap-2.5", row && "contents")}>
+        <Field label="Qtd" id={`${id}-qty`}>
+          <div role="group" aria-labelledby={`${id}-qty`} className={fieldClass}>
             <Button
               type="button"
               variant="ghost"
               aria-label="Diminuir"
-              disabled={quantidade <= 1}
-              onClick={() => setQtd(Math.max(1, quantidade - 1))}
+              disabled={quantity <= 1}
+              onClick={() => setQty(Math.max(1, quantity - 1))}
               className="h-full w-11 rounded-none text-foreground tablet:w-8"
             >
               <Minus className="size-4" />
             </Button>
             <output aria-live="polite" className="min-w-[26px] flex-1 text-center text-[15px] font-semibold tablet:text-[13px]">
-              {quantidade}
+              {quantity}
             </output>
             <Button
               type="button"
               variant="ghost"
               aria-label="Aumentar"
-              disabled={quantidade >= maximo}
-              onClick={() => setQtd(Math.min(maximo, quantidade + 1))}
+              disabled={quantity >= max}
+              onClick={() => setQty(Math.min(max, quantity + 1))}
               className="h-full w-11 rounded-none text-foreground tablet:w-8"
             >
               <Plus className="size-4" />
             </Button>
           </div>
-        </Campo>
+        </Field>
 
         <div className="flex min-w-0 flex-col gap-1">
-          <Label htmlFor={`${id}-preco`}>Preço un.</Label>
-          <div className={cn(campo, "gap-1.5 px-3 tablet:px-2.5", linha && "w-[100px]")}>
+          <Label htmlFor={`${id}-price`}>Preço un.</Label>
+          <div className={cn(fieldClass, "gap-1.5 px-3 tablet:px-2.5", row && "w-[100px]")}>
             <span className="text-[11px] text-muted-foreground">R$</span>
             <input
-              id={`${id}-preco`}
+              id={`${id}-price`}
               inputMode="decimal"
               autoComplete="off"
-              value={texto}
-              onChange={(e) => setPrecoTexto(e.target.value)}
-              aria-invalid={preco === null ? true : undefined}
+              value={text}
+              onChange={(e) => setPriceText(e.target.value)}
+              aria-invalid={price === null ? true : undefined}
               className="h-full w-full min-w-0 bg-transparent text-sm text-foreground outline-none tablet:text-xs"
             />
           </div>
@@ -210,61 +210,61 @@ export function FormularioDePedido({
     </>
   );
 
-  const campoPagamento = (
-    <Campo rotulo="Pagamento" id={`${id}-pagamento`}>
+  const paymentField = (
+    <Field label="Pagamento" id={`${id}-payment`}>
       <ToggleGroup
         type="single"
-        aria-labelledby={`${id}-pagamento`}
-        value={pagamento}
-        onValueChange={(v) => v && setPagamento(v as typeof pagamento)}
+        aria-labelledby={`${id}-payment`}
+        value={payment}
+        onValueChange={(v) => v && setPayment(v as typeof payment)}
       >
-        <ToggleGroupItem value="pendente" className={segmento}>
+        <ToggleGroupItem value="pending" className={segmentClass}>
           Pendente
         </ToggleGroupItem>
-        <ToggleGroupItem value="pix" className={segmento}>
+        <ToggleGroupItem value="pix" className={segmentClass}>
           Pix
         </ToggleGroupItem>
-        <ToggleGroupItem value="dinheiro" className={segmento}>
+        <ToggleGroupItem value="dinheiro" className={segmentClass}>
           Dinheiro
         </ToggleGroupItem>
       </ToggleGroup>
-    </Campo>
+    </Field>
   );
 
-  const mensagem = erro && (
-    <p role="alert" className={cn("text-[11px] text-warn", linha && "basis-full")}>
-      {erro}
+  const message = error && (
+    <p role="alert" className={cn("text-[11px] text-warn", row && "basis-full")}>
+      {error}
     </p>
   );
 
-  if (linha) {
+  if (row) {
     return (
       <Card className="shadow-float">
         <form
           aria-label="Nova venda ou reserva"
-          onSubmit={registrar}
+          onSubmit={submit}
           className="flex flex-wrap items-end gap-2.5 p-3.5"
         >
-          {campos}
+          {fields}
           <div className="ml-auto flex items-end gap-2.5">
-            {campoPagamento}
-            <Button type="submit" disabled={salvando} className="h-[38px] px-4 font-semibold">
-              {rotuloBotao}
+            {paymentField}
+            <Button type="submit" disabled={saving} className="h-[38px] px-4 font-semibold">
+              {buttonLabel}
             </Button>
           </div>
-          {mensagem}
+          {message}
         </form>
       </Card>
     );
   }
 
   return (
-    <form aria-label="Nova venda ou reserva" onSubmit={registrar} className="flex flex-col gap-3">
-      {campos}
-      {campoPagamento}
-      {mensagem}
-      <Button type="submit" size="lg" disabled={salvando} className="h-12 rounded-xl text-sm">
-        {rotuloBotao}
+    <form aria-label="Nova venda ou reserva" onSubmit={submit} className="flex flex-col gap-3">
+      {fields}
+      {paymentField}
+      {message}
+      <Button type="submit" size="lg" disabled={saving} className="h-12 rounded-xl text-sm">
+        {buttonLabel}
       </Button>
     </form>
   );

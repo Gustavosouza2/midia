@@ -1,39 +1,39 @@
-import type { ItemPedido, Pedido, PrecoDoDia } from "@/local-db";
+import type { OrderItem, Order, DayMenuItem } from "@/local-db";
 
-export type Estoque = {
-  /** Unidades que o dia tem para vender. Nulo = sem limite. */
-  quantidade: number | null;
-  /** Itens não cancelados de pedidos não cancelados do dia, reservas incluídas. */
-  vendidos: number;
-  /** Nulo quando não há limite. Nunca negativo, mesmo se a quantidade baixou depois das vendas. */
-  restantes: number | null;
-  esgotado: boolean;
+export type Stock = {
+  /** Units the day has to sell. Null = no limit. */
+  quantity: number | null;
+  /** Non-canceled items of the day's non-canceled orders, reservations included. */
+  soldUnits: number;
+  /** Null when there is no limit. Never negative, even if the quantity was lowered after the sales. */
+  remaining: number | null;
+  soldOut: boolean;
 };
 
 /**
- * Estoque de cada item num dia de venda. Usado pelas escritas (recusar venda acima do que resta)
- * e pelas telas, para as duas contarem igual.
+ * Stock of each item on a sale day. Used by the writes (refusing a sale above what remains)
+ * and by the screens, so both count the same way.
  */
-export function estoqueDoDia(
-  dados: { precosDoDia: PrecoDoDia[]; pedidos: Pedido[]; itens: ItemPedido[] },
-  diaId: string,
-): (produtoId: string) => Estoque {
-  const quantidadePorProduto = new Map(
-    dados.precosDoDia.filter((p) => p.diaId === diaId).map((p) => [p.produtoId, p.quantidade ?? null]),
+export function dayStock(
+  data: { dayMenuItems: DayMenuItem[]; orders: Order[]; items: OrderItem[] },
+  dayId: string,
+): (productId: string) => Stock {
+  const quantityByProduct = new Map(
+    data.dayMenuItems.filter((p) => p.dayId === dayId).map((p) => [p.productId, p.quantity ?? null]),
   );
-  const pedidosDoDia = new Set(
-    dados.pedidos.filter((p) => p.diaId === diaId && p.status !== "cancelado").map((p) => p.id),
+  const dayOrders = new Set(
+    data.orders.filter((p) => p.dayId === dayId && p.status !== "cancelado").map((p) => p.id),
   );
-  const vendidosPorProduto = new Map<string, number>();
-  for (const i of dados.itens) {
-    if (i.canceladoEm || !pedidosDoDia.has(i.pedidoId)) continue;
-    vendidosPorProduto.set(i.produtoId, (vendidosPorProduto.get(i.produtoId) ?? 0) + i.quantidade);
+  const soldByProduct = new Map<string, number>();
+  for (const i of data.items) {
+    if (i.canceledAt || !dayOrders.has(i.orderId)) continue;
+    soldByProduct.set(i.productId, (soldByProduct.get(i.productId) ?? 0) + i.quantity);
   }
 
-  return (produtoId) => {
-    const quantidade = quantidadePorProduto.get(produtoId) ?? null;
-    const vendidos = vendidosPorProduto.get(produtoId) ?? 0;
-    const restantes = quantidade === null ? null : Math.max(0, quantidade - vendidos);
-    return { quantidade, vendidos, restantes, esgotado: restantes === 0 };
+  return (productId) => {
+    const quantity = quantityByProduct.get(productId) ?? null;
+    const soldUnits = soldByProduct.get(productId) ?? 0;
+    const remaining = quantity === null ? null : Math.max(0, quantity - soldUnits);
+    return { quantity, soldUnits, remaining, soldOut: remaining === 0 };
   };
 }

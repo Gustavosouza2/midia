@@ -3,332 +3,332 @@ import Dexie from "dexie";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { uuidV5 } from "@/lib/uuid-v5";
 import {
-  adicionarProduto,
-  criarDia,
-  definirNoCardapio,
-  definirPrecoNoDia,
-  definirQuantidadeNoDia,
-  diaTemPedidos,
-  entregarReserva,
-  ErroDeEscrita,
-  estornarPagamento,
-  registrarPagamento,
-  registrarPedido,
-  removerDia,
-  type NovoPedido,
+  addProduct,
+  createDay,
+  setOnMenu,
+  setDayPrice,
+  setDayQuantity,
+  dayHasOrders,
+  deliverReservation,
+  WriteError,
+  refundPayment,
+  recordPayment,
+  placeOrder,
+  removeDay,
+  type NewOrder,
 } from "./writes";
-import { CantinaLocalDb } from "./index";
+import { CanteenLocalDb } from "./index";
 
-const CANTINA = "c0000000-0000-4000-8000-000000000001";
-let db: CantinaLocalDb;
+const CANTEEN = "c0000000-0000-4000-8000-000000000001";
+let db: CanteenLocalDb;
 
 beforeEach(async () => {
-  await Dexie.delete("cantina");
-  db = new CantinaLocalDb();
+  await Dexie.delete("canteen");
+  db = new CanteenLocalDb();
 });
 afterEach(() => db.close());
 
-async function comCantina() {
-  await db.cantinas.put({ id: CANTINA, nome: "Mídia", slug: "midia", atualizadoEm: "2026-11-01T00:00:00Z", seq: 1 });
+async function withCanteen() {
+  await db.canteens.put({ id: CANTEEN, name: "Mídia", slug: "midia", updatedAt: "2026-11-01T00:00:00Z", seq: 1 });
 }
 
-async function produto(nome: string, precoCentavos: number, ativo = true) {
+async function product(name: string, priceCents: number, active = true) {
   const id = crypto.randomUUID();
-  await db.produtos.put({ id, cantinaId: CANTINA, nome, precoCentavos, ativo, atualizadoEm: "2026-11-01T00:00:00Z", seq: 1 });
+  await db.products.put({ id, canteenId: CANTEEN, name, priceCents, active, updatedAt: "2026-11-01T00:00:00Z", seq: 1 });
   return id;
 }
 
-async function cardapio(diaId: string) {
-  const precos = await db.precosDoDia.where("diaId").equals(diaId).toArray();
-  return Object.fromEntries(precos.filter((p) => p.ativo).map((p) => [p.produtoId, p.precoCentavos]));
+async function menu(dayId: string) {
+  const prices = await db.dayMenuItems.where("dayId").equals(dayId).toArray();
+  return Object.fromEntries(prices.filter((p) => p.active).map((p) => [p.productId, p.priceCents]));
 }
 
 const outbox = () => db.outbox.orderBy("id").toArray();
 
-async function rejeita(promessa: Promise<unknown>, codigo: ErroDeEscrita["codigo"]) {
-  const erro = await promessa.then(
+async function expectRejection(promise: Promise<unknown>, code: WriteError["code"]) {
+  const error = await promise.then(
     () => null,
     (e: unknown) => e,
   );
-  expect(erro).toBeInstanceOf(ErroDeEscrita);
-  expect((erro as ErroDeEscrita).codigo).toBe(codigo);
+  expect(error).toBeInstanceOf(WriteError);
+  expect((error as WriteError).code).toBe(code);
 }
 
-describe("sem cantina no aparelho", () => {
-  it("recusa escrever e pede para conectar uma vez", async () => {
-    await rejeita(criarDia(db, { data: "2026-11-15", cardapio: { tipo: "padrao" } }), "sem-cantina");
-    await rejeita(adicionarProduto(db, { nome: "Espeto", precoCentavos: 1000 }), "sem-cantina");
+describe("no canteen on the device", () => {
+  it("refuses to write and asks to connect once", async () => {
+    await expectRejection(createDay(db, { date: "2026-11-15", menu: { type: "default" } }), "no-canteen");
+    await expectRejection(addProduct(db, { name: "Espeto", priceCents: 1000 }), "no-canteen");
     expect(await outbox()).toEqual([]);
   });
 });
 
-describe("criarDia", () => {
-  beforeEach(comCantina);
+describe("createDay", () => {
+  beforeEach(withCanteen);
 
-  it("deriva o id da cantina + data e põe dia e cardápio na outbox, uma linha por item", async () => {
-    const carne = await produto("Carne", 1000);
-    const frango = await produto("Frango", 900);
-    await produto("Antigo", 500, false);
+  it("derives the id from canteen + date and puts the day and menu in the outbox, one row per item", async () => {
+    const beef = await product("Carne", 1000);
+    const chicken = await product("Frango", 900);
+    await product("Antigo", 500, false);
 
-    const diaId = await criarDia(db, { data: "2026-11-15", nome: "  Culto de jovens ", cardapio: { tipo: "padrao" } });
+    const dayId = await createDay(db, { date: "2026-11-15", name: "  Culto de jovens ", menu: { type: "default" } });
 
-    expect(diaId).toBe(await uuidV5("2026-11-15", CANTINA));
-    const dia = await db.diasDeVenda.get(diaId);
-    expect(dia).toMatchObject({ data: "2026-11-15", nome: "Culto de jovens", cantinaId: CANTINA, canceladoEm: null, seq: 0 });
-    expect(await cardapio(diaId)).toEqual({ [carne]: 1000, [frango]: 900 });
+    expect(dayId).toBe(await uuidV5("2026-11-15", CANTEEN));
+    const day = await db.saleDays.get(dayId);
+    expect(day).toMatchObject({ date: "2026-11-15", name: "Culto de jovens", canteenId: CANTEEN, canceledAt: null, seq: 0 });
+    expect(await menu(dayId)).toEqual({ [beef]: 1000, [chicken]: 900 });
 
-    const fila = await outbox();
-    expect(fila.map((i) => [i.tabela, i.operacao])).toEqual([
-      ["diasDeVenda", "inserir"],
-      ["precosDoDia", "inserir"],
-      ["precosDoDia", "inserir"],
+    const queue = await outbox();
+    expect(queue.map((i) => [i.table, i.operation])).toEqual([
+      ["saleDays", "insert"],
+      ["dayMenuItems", "insert"],
+      ["dayMenuItems", "insert"],
     ]);
-    expect(fila[0].payload).toEqual(dia);
-    const precoCarne = await db.precosDoDia.get(await uuidV5(carne, diaId));
-    expect(precoCarne?.precoCentavos).toBe(1000);
+    expect(queue[0].payload).toEqual(day);
+    const beefPrice = await db.dayMenuItems.get(await uuidV5(beef, dayId));
+    expect(beefPrice?.priceCents).toBe(1000);
   });
 
-  it("copia os itens à venda e os preços do dia escolhido", async () => {
-    const carne = await produto("Carne", 1000);
-    const frango = await produto("Frango", 900);
-    await produto("Pão de alho", 600);
-    const origem = await criarDia(db, { data: "2026-11-08", cardapio: { tipo: "padrao" } });
-    await definirPrecoNoDia(db, origem, carne, 1200);
-    await definirNoCardapio(db, origem, frango, true);
-    const paoDeAlho = (await db.produtos.toArray()).find((p) => p.nome === "Pão de alho")!.id;
-    await definirNoCardapio(db, origem, paoDeAlho, false);
+  it("copies the items for sale and the prices of the chosen day", async () => {
+    const beef = await product("Carne", 1000);
+    const chicken = await product("Frango", 900);
+    await product("Pão de alho", 600);
+    const origin = await createDay(db, { date: "2026-11-08", menu: { type: "default" } });
+    await setDayPrice(db, origin, beef, 1200);
+    await setOnMenu(db, origin, chicken, true);
+    const garlicBread = (await db.products.toArray()).find((p) => p.name === "Pão de alho")!.id;
+    await setOnMenu(db, origin, garlicBread, false);
 
-    const novo = await criarDia(db, { data: "2026-11-15", cardapio: { tipo: "copiar", diaId: origem } });
+    const created = await createDay(db, { date: "2026-11-15", menu: { type: "copy", dayId: origin } });
 
-    expect(await cardapio(novo)).toEqual({ [carne]: 1200, [frango]: 900 });
+    expect(await menu(created)).toEqual({ [beef]: 1200, [chicken]: 900 });
   });
 
-  it("copiar leva a quantidade de cada item; com os preços padrão, o dia nasce sem limite", async () => {
-    const carne = await produto("Carne", 1000);
-    const origem = await criarDia(db, { data: "2026-11-08", cardapio: { tipo: "padrao" } });
-    expect((await db.precosDoDia.get(await uuidV5(carne, origem)))?.quantidade).toBeNull();
-    await definirQuantidadeNoDia(db, origem, carne, 50);
+  it("copying carries each item's quantity; with the default prices, the day starts without a limit", async () => {
+    const beef = await product("Carne", 1000);
+    const origin = await createDay(db, { date: "2026-11-08", menu: { type: "default" } });
+    expect((await db.dayMenuItems.get(await uuidV5(beef, origin)))?.quantity).toBeNull();
+    await setDayQuantity(db, origin, beef, 50);
 
-    const novo = await criarDia(db, { data: "2026-11-15", cardapio: { tipo: "copiar", diaId: origem } });
+    const created = await createDay(db, { date: "2026-11-15", menu: { type: "copy", dayId: origin } });
 
-    expect((await db.precosDoDia.get(await uuidV5(carne, novo)))?.quantidade).toBe(50);
+    expect((await db.dayMenuItems.get(await uuidV5(beef, created)))?.quantity).toBe(50);
   });
 
-  it("recusa uma data que já tem dia", async () => {
-    await criarDia(db, { data: "2026-11-15", cardapio: { tipo: "padrao" } });
-    await rejeita(criarDia(db, { data: "2026-11-15", cardapio: { tipo: "padrao" } }), "dia-ja-existe");
+  it("refuses a date that already has a day", async () => {
+    await createDay(db, { date: "2026-11-15", menu: { type: "default" } });
+    await expectRejection(createDay(db, { date: "2026-11-15", menu: { type: "default" } }), "day-exists");
   });
 
-  it("criar de novo uma data removida reativa o mesmo registro com o cardápio novo", async () => {
-    const carne = await produto("Carne", 1000);
-    const frango = await produto("Frango", 900);
-    const origem = await criarDia(db, { data: "2026-11-08", cardapio: { tipo: "padrao" } });
-    await definirNoCardapio(db, origem, frango, false);
+  it("creating a removed date again reactivates the same record with the new menu", async () => {
+    const beef = await product("Carne", 1000);
+    const chicken = await product("Frango", 900);
+    const origin = await createDay(db, { date: "2026-11-08", menu: { type: "default" } });
+    await setOnMenu(db, origin, chicken, false);
 
-    const diaId = await criarDia(db, { data: "2026-11-15", cardapio: { tipo: "padrao" } });
-    await removerDia(db, diaId);
-    expect((await db.diasDeVenda.get(diaId))?.canceladoEm).not.toBeNull();
+    const dayId = await createDay(db, { date: "2026-11-15", menu: { type: "default" } });
+    await removeDay(db, dayId);
+    expect((await db.saleDays.get(dayId))?.canceledAt).not.toBeNull();
 
-    const reativado = await criarDia(db, { data: "2026-11-15", cardapio: { tipo: "copiar", diaId: origem } });
+    const reactivated = await createDay(db, { date: "2026-11-15", menu: { type: "copy", dayId: origin } });
 
-    expect(reativado).toBe(diaId);
-    expect(await db.diasDeVenda.count()).toBe(2);
-    expect((await db.diasDeVenda.get(diaId))?.canceladoEm).toBeNull();
-    expect(await cardapio(diaId)).toEqual({ [carne]: 1000 });
-  });
-});
-
-describe("removerDia", () => {
-  beforeEach(comCantina);
-
-  it("recusa quando o dia tem pedidos", async () => {
-    const carne = await produto("Carne", 1000);
-    const diaId = await criarDia(db, { data: "2026-11-15", cardapio: { tipo: "padrao" } });
-    expect(await diaTemPedidos(db, diaId)).toBe(false);
-    await registrarPedido(db, pedido(diaId, carne));
-
-    expect(await diaTemPedidos(db, diaId)).toBe(true);
-    await rejeita(removerDia(db, diaId), "dia-com-pedidos");
-    expect((await db.diasDeVenda.get(diaId))?.canceladoEm).toBeNull();
+    expect(reactivated).toBe(dayId);
+    expect(await db.saleDays.count()).toBe(2);
+    expect((await db.saleDays.get(dayId))?.canceledAt).toBeNull();
+    expect(await menu(dayId)).toEqual({ [beef]: 1000 });
   });
 });
 
-describe("cardápio do dia", () => {
-  beforeEach(comCantina);
+describe("removeDay", () => {
+  beforeEach(withCanteen);
 
-  it("pôr à venda um item sem linha usa o preço padrão; mudar o preço não muda se está à venda", async () => {
-    const diaId = await criarDia(db, { data: "2026-11-15", cardapio: { tipo: "padrao" } });
-    const novo = await adicionarProduto(db, { nome: "Linguiça", precoCentavos: 800 });
-    await definirPrecoNoDia(db, diaId, novo, 700);
-    expect(await cardapio(diaId)).toEqual({});
+  it("refuses when the day has orders", async () => {
+    const beef = await product("Carne", 1000);
+    const dayId = await createDay(db, { date: "2026-11-15", menu: { type: "default" } });
+    expect(await dayHasOrders(db, dayId)).toBe(false);
+    await placeOrder(db, order(dayId, beef));
 
-    await definirNoCardapio(db, diaId, novo, true);
-    expect(await cardapio(diaId)).toEqual({ [novo]: 700 });
+    expect(await dayHasOrders(db, dayId)).toBe(true);
+    await expectRejection(removeDay(db, dayId), "day-has-orders");
+    expect((await db.saleDays.get(dayId))?.canceledAt).toBeNull();
+  });
+});
+
+describe("day menu", () => {
+  beforeEach(withCanteen);
+
+  it("putting an item without a row on sale uses the default price; changing the price does not change whether it is for sale", async () => {
+    const dayId = await createDay(db, { date: "2026-11-15", menu: { type: "default" } });
+    const created = await addProduct(db, { name: "Linguiça", priceCents: 800 });
+    await setDayPrice(db, dayId, created, 700);
+    expect(await menu(dayId)).toEqual({});
+
+    await setOnMenu(db, dayId, created, true);
+    expect(await menu(dayId)).toEqual({ [created]: 700 });
   });
 
-  it("um item novo pode nascer à venda no dia, numa escrita só", async () => {
-    const diaId = await criarDia(db, { data: "2026-11-15", cardapio: { tipo: "padrao" } });
+  it("a new item can start on sale on the day, in a single write", async () => {
+    const dayId = await createDay(db, { date: "2026-11-15", menu: { type: "default" } });
     await db.outbox.clear();
-    const novo = await adicionarProduto(db, { nome: "Linguiça", precoCentavos: 800, aVendaNoDia: diaId });
+    const created = await addProduct(db, { name: "Linguiça", priceCents: 800, forSaleOnDay: dayId });
 
-    expect(await cardapio(diaId)).toEqual({ [novo]: 800 });
-    expect((await outbox()).map((i) => i.tabela)).toEqual(["produtos", "precosDoDia"]);
+    expect(await menu(dayId)).toEqual({ [created]: 800 });
+    expect((await outbox()).map((i) => i.table)).toEqual(["products", "dayMenuItems"]);
   });
 
-  it("definir a quantidade não põe o item à venda; vazio volta a ser sem limite", async () => {
-    const diaId = await criarDia(db, { data: "2026-11-15", cardapio: { tipo: "padrao" } });
-    const novo = await adicionarProduto(db, { nome: "Linguiça", precoCentavos: 800 });
-    const linha = async () => db.precosDoDia.get(await uuidV5(novo, diaId));
+  it("setting the quantity does not put the item on sale; empty goes back to no limit", async () => {
+    const dayId = await createDay(db, { date: "2026-11-15", menu: { type: "default" } });
+    const created = await addProduct(db, { name: "Linguiça", priceCents: 800 });
+    const row = async () => db.dayMenuItems.get(await uuidV5(created, dayId));
 
-    await definirQuantidadeNoDia(db, diaId, novo, 30);
-    expect(await linha()).toMatchObject({ ativo: false, quantidade: 30, precoCentavos: 800 });
+    await setDayQuantity(db, dayId, created, 30);
+    expect(await row()).toMatchObject({ active: false, quantity: 30, priceCents: 800 });
 
-    await definirNoCardapio(db, diaId, novo, true);
-    await definirQuantidadeNoDia(db, diaId, novo, null);
-    expect(await linha()).toMatchObject({ ativo: true, quantidade: null });
+    await setOnMenu(db, dayId, created, true);
+    await setDayQuantity(db, dayId, created, null);
+    expect(await row()).toMatchObject({ active: true, quantity: null });
   });
 
-  it("recusa quantidade negativa ou quebrada", async () => {
-    const carne = await produto("Carne", 1000);
-    const diaId = await criarDia(db, { data: "2026-11-15", cardapio: { tipo: "padrao" } });
-    await rejeita(definirQuantidadeNoDia(db, diaId, carne, -1), "valor-invalido");
-    await rejeita(definirQuantidadeNoDia(db, diaId, carne, 1.5), "valor-invalido");
+  it("refuses a negative or fractional quantity", async () => {
+    const beef = await product("Carne", 1000);
+    const dayId = await createDay(db, { date: "2026-11-15", menu: { type: "default" } });
+    await expectRejection(setDayQuantity(db, dayId, beef, -1), "invalid-value");
+    await expectRejection(setDayQuantity(db, dayId, beef, 1.5), "invalid-value");
   });
 
-  it("repetir a mesma mudança não gera item novo na outbox", async () => {
-    const carne = await produto("Carne", 1000);
-    const diaId = await criarDia(db, { data: "2026-11-15", cardapio: { tipo: "padrao" } });
-    const antes = (await outbox()).length;
+  it("repeating the same change does not add a new outbox item", async () => {
+    const beef = await product("Carne", 1000);
+    const dayId = await createDay(db, { date: "2026-11-15", menu: { type: "default" } });
+    const before = (await outbox()).length;
 
-    await definirNoCardapio(db, diaId, carne, true);
-    expect(await outbox()).toHaveLength(antes);
+    await setOnMenu(db, dayId, beef, true);
+    expect(await outbox()).toHaveLength(before);
 
-    await definirNoCardapio(db, diaId, carne, false);
-    const fila = await outbox();
-    expect(fila).toHaveLength(antes + 1);
-    expect(fila.at(-1)).toMatchObject({ tabela: "precosDoDia", operacao: "atualizar" });
+    await setOnMenu(db, dayId, beef, false);
+    const queue = await outbox();
+    expect(queue).toHaveLength(before + 1);
+    expect(queue.at(-1)).toMatchObject({ table: "dayMenuItems", operation: "update" });
   });
 });
 
-function pedido(diaId: string, produtoId: string, mudanca: Partial<NovoPedido> = {}): NovoPedido {
+function order(dayId: string, productId: string, change: Partial<NewOrder> = {}): NewOrder {
   return {
-    diaId,
-    nomeCliente: "Melina",
-    tipo: "venda",
-    produtoId,
-    quantidade: 3,
-    precoUnitarioCentavos: 1000,
-    pagamento: "pendente",
-    ...mudanca,
+    dayId,
+    customerName: "Melina",
+    type: "sale",
+    productId,
+    quantity: 3,
+    unitPriceCents: 1000,
+    payment: "pending",
+    ...change,
   };
 }
 
-describe("pedidos e pagamentos", () => {
-  let diaId: string;
-  let carne: string;
+describe("orders and payments", () => {
+  let dayId: string;
+  let beef: string;
   beforeEach(async () => {
-    await comCantina();
-    carne = await produto("Carne", 1000);
-    diaId = await criarDia(db, { data: "2026-11-15", cardapio: { tipo: "padrao" } });
+    await withCanteen();
+    beef = await product("Carne", 1000);
+    dayId = await createDay(db, { date: "2026-11-15", menu: { type: "default" } });
     await db.outbox.clear();
   });
 
-  it("venda pendente: pedido entregue, um item, nenhum pagamento", async () => {
-    const id = await registrarPedido(db, pedido(diaId, carne));
+  it("pending sale: delivered order, one item, no payment", async () => {
+    const id = await placeOrder(db, order(dayId, beef));
 
-    expect(await db.pedidos.get(id)).toMatchObject({ status: "entregue", diaId, cantinaId: CANTINA });
-    expect((await db.pedidos.get(id))?.entregueEm).not.toBeNull();
-    expect(await db.itensPedido.where("pedidoId").equals(id).toArray()).toMatchObject([
-      { produtoId: carne, quantidade: 3, precoUnitarioCentavos: 1000 },
+    expect(await db.orders.get(id)).toMatchObject({ status: "entregue", dayId, canteenId: CANTEEN });
+    expect((await db.orders.get(id))?.deliveredAt).not.toBeNull();
+    expect(await db.orderItems.where("orderId").equals(id).toArray()).toMatchObject([
+      { productId: beef, quantity: 3, unitPriceCents: 1000 },
     ]);
-    expect(await db.pagamentos.count()).toBe(0);
-    expect((await outbox()).map((i) => i.tabela)).toEqual(["clientes", "pedidos", "itensPedido"]);
+    expect(await db.payments.count()).toBe(0);
+    expect((await outbox()).map((i) => i.table)).toEqual(["customers", "orders", "orderItems"]);
   });
 
-  it("venda no Pix registra o pagamento do total junto", async () => {
-    const id = await registrarPedido(db, pedido(diaId, carne, { pagamento: "pix" }));
+  it("a Pix sale records the payment of the total with it", async () => {
+    const id = await placeOrder(db, order(dayId, beef, { payment: "pix" }));
 
-    expect(await db.pagamentos.where("pedidoId").equals(id).toArray()).toMatchObject([
-      { valorCentavos: 3000, forma: "pix", estornadoEm: null },
+    expect(await db.payments.where("orderId").equals(id).toArray()).toMatchObject([
+      { amountCents: 3000, method: "pix", refundedAt: null },
     ]);
-    expect((await outbox()).map((i) => i.tabela)).toEqual(["clientes", "pedidos", "itensPedido", "pagamentos"]);
-    const [pagamento] = await db.pagamentos.toArray();
-    expect(pagamento.registradoEm).toBe((await db.pedidos.get(id))?.criadoEm);
+    expect((await outbox()).map((i) => i.table)).toEqual(["customers", "orders", "orderItems", "payments"]);
+    const [payment] = await db.payments.toArray();
+    expect(payment.recordedAt).toBe((await db.orders.get(id))?.createdAt);
   });
 
-  it("reserva nasce recebida e é entregue depois", async () => {
-    const id = await registrarPedido(db, pedido(diaId, carne, { tipo: "reserva" }));
-    expect(await db.pedidos.get(id)).toMatchObject({ status: "recebido", entregueEm: null });
+  it("a reservation starts received and is delivered later", async () => {
+    const id = await placeOrder(db, order(dayId, beef, { type: "reservation" }));
+    expect(await db.orders.get(id)).toMatchObject({ status: "recebido", deliveredAt: null });
 
-    await entregarReserva(db, id);
-    expect((await db.pedidos.get(id))?.status).toBe("entregue");
-    expect((await db.pedidos.get(id))?.entregueEm).not.toBeNull();
+    await deliverReservation(db, id);
+    expect((await db.orders.get(id))?.status).toBe("entregue");
+    expect((await db.orders.get(id))?.deliveredAt).not.toBeNull();
   });
 
-  it("reaproveita o cliente pelo nome, sem diferença de maiúsculas e espaços", async () => {
-    const a = await registrarPedido(db, pedido(diaId, carne, { nomeCliente: "Melina" }));
-    const b = await registrarPedido(db, pedido(diaId, carne, { nomeCliente: "  melina " }));
-    const c = await registrarPedido(db, pedido(diaId, carne, { nomeCliente: "Gustavo" }));
+  it("reuses the customer by name, ignoring case and spaces", async () => {
+    const a = await placeOrder(db, order(dayId, beef, { customerName: "Melina" }));
+    const b = await placeOrder(db, order(dayId, beef, { customerName: "  melina " }));
+    const c = await placeOrder(db, order(dayId, beef, { customerName: "Gustavo" }));
 
-    const clienteDe = async (id: string) => (await db.pedidos.get(id))?.clienteId;
-    expect(await clienteDe(b)).toBe(await clienteDe(a));
-    expect(await clienteDe(c)).not.toBe(await clienteDe(a));
-    expect(await db.clientes.count()).toBe(2);
+    const customerOf = async (id: string) => (await db.orders.get(id))?.customerId;
+    expect(await customerOf(b)).toBe(await customerOf(a));
+    expect(await customerOf(c)).not.toBe(await customerOf(a));
+    expect(await db.customers.count()).toBe(2);
   });
 
-  it("receber paga só o que está em aberto e recusa quando não há nada", async () => {
-    const id = await registrarPedido(db, pedido(diaId, carne));
-    await db.pagamentos.put({
+  it("receiving pays only what is outstanding and refuses when there is nothing", async () => {
+    const id = await placeOrder(db, order(dayId, beef));
+    await db.payments.put({
       id: crypto.randomUUID(),
-      pedidoId: id,
-      cantinaId: CANTINA,
-      valorCentavos: 1000,
-      forma: "dinheiro",
-      vendedorId: null,
-      registradoEm: "2026-11-15T20:00:00Z",
-      estornadoEm: null,
-      atualizadoEm: "2026-11-15T20:00:00Z",
+      orderId: id,
+      canteenId: CANTEEN,
+      amountCents: 1000,
+      method: "dinheiro",
+      sellerId: null,
+      recordedAt: "2026-11-15T20:00:00Z",
+      refundedAt: null,
+      updatedAt: "2026-11-15T20:00:00Z",
       seq: 5,
     });
 
-    const pagamentoId = await registrarPagamento(db, id, "pix");
+    const paymentId = await recordPayment(db, id, "pix");
 
-    expect(await db.pagamentos.get(pagamentoId)).toMatchObject({ valorCentavos: 2000, forma: "pix" });
-    await rejeita(registrarPagamento(db, id, "dinheiro"), "nada-em-aberto");
+    expect(await db.payments.get(paymentId)).toMatchObject({ amountCents: 2000, method: "pix" });
+    await expectRejection(recordPayment(db, id, "dinheiro"), "nothing-due");
   });
 
-  it("com quantidade no dia, recusa vender mais do que resta e diz quanto resta", async () => {
-    await definirQuantidadeNoDia(db, diaId, carne, 5);
-    await registrarPedido(db, pedido(diaId, carne, { tipo: "reserva", quantidade: 2 }));
+  it("with a quantity on the day, refuses selling more than what remains and says how much remains", async () => {
+    await setDayQuantity(db, dayId, beef, 5);
+    await placeOrder(db, order(dayId, beef, { type: "reservation", quantity: 2 }));
 
-    const erro = await registrarPedido(db, pedido(diaId, carne, { quantidade: 4 })).catch((e: unknown) => e);
-    expect(erro).toBeInstanceOf(ErroDeEscrita);
-    expect(erro).toMatchObject({ codigo: "sem-estoque", message: "Só restam 3 de Carne." });
+    const error = await placeOrder(db, order(dayId, beef, { quantity: 4 })).catch((e: unknown) => e);
+    expect(error).toBeInstanceOf(WriteError);
+    expect(error).toMatchObject({ code: "out-of-stock", message: "Só restam 3 de Carne." });
 
-    await registrarPedido(db, pedido(diaId, carne, { quantidade: 3 }));
-    await expect(registrarPedido(db, pedido(diaId, carne, { quantidade: 1 }))).rejects.toMatchObject({
-      codigo: "sem-estoque",
+    await placeOrder(db, order(dayId, beef, { quantity: 3 }));
+    await expect(placeOrder(db, order(dayId, beef, { quantity: 1 }))).rejects.toMatchObject({
+      code: "out-of-stock",
       message: "Carne esgotou.",
     });
-    expect(await db.pedidos.count()).toBe(2);
+    expect(await db.orders.count()).toBe(2);
   });
 
-  it("pedido cancelado devolve a quantidade ao dia", async () => {
-    await definirQuantidadeNoDia(db, diaId, carne, 3);
-    const id = await registrarPedido(db, pedido(diaId, carne, { quantidade: 3 }));
-    await db.pedidos.update(id, { status: "cancelado" });
+  it("a canceled order gives the quantity back to the day", async () => {
+    await setDayQuantity(db, dayId, beef, 3);
+    const id = await placeOrder(db, order(dayId, beef, { quantity: 3 }));
+    await db.orders.update(id, { status: "cancelado" });
 
-    await registrarPedido(db, pedido(diaId, carne, { quantidade: 3 }));
+    await placeOrder(db, order(dayId, beef, { quantity: 3 }));
   });
 
-  it("desfazer estorna o pagamento e o pedido volta a ter valor em aberto", async () => {
-    const id = await registrarPedido(db, pedido(diaId, carne, { pagamento: "dinheiro" }));
-    const [pago] = await db.pagamentos.where("pedidoId").equals(id).toArray();
+  it("undo refunds the payment and the order is outstanding again", async () => {
+    const id = await placeOrder(db, order(dayId, beef, { payment: "dinheiro" }));
+    const [paid] = await db.payments.where("orderId").equals(id).toArray();
 
-    await estornarPagamento(db, pago.id);
+    await refundPayment(db, paid.id);
 
-    expect((await db.pagamentos.get(pago.id))?.estornadoEm).not.toBeNull();
-    expect((await outbox()).at(-1)).toMatchObject({ tabela: "pagamentos", registroId: pago.id, operacao: "atualizar" });
-    expect(await db.pagamentos.get(await registrarPagamento(db, id, "pix"))).toMatchObject({ valorCentavos: 3000 });
+    expect((await db.payments.get(paid.id))?.refundedAt).not.toBeNull();
+    expect((await outbox()).at(-1)).toMatchObject({ table: "payments", recordId: paid.id, operation: "update" });
+    expect(await db.payments.get(await recordPayment(db, id, "pix"))).toMatchObject({ amountCents: 3000 });
   });
 });

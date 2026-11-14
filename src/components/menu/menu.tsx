@@ -3,38 +3,38 @@
 import { Plus } from "lucide-react";
 import { startTransition, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { lerBancoLocal } from "@/local-db/read-local-db";
-import { useLeituraLocal } from "@/local-db/use-local-query";
-import { montarCardapio } from "@/lib/menu";
-import { diaInicial, diasAtivos } from "@/lib/days";
-import { PrimeiroDia } from "../day/first-day";
-import { TrocaSuave } from "../transitions/smooth-swap";
-import { SeletorDeDia } from "../day/day-picker";
-import { IconeCardapio } from "../icons/menu-icon";
-import { Migalha } from "../breadcrumb";
-import { ItensSemDia } from "./items-without-day";
-import { ListaDeItens } from "./item-list";
-import { NovoItem } from "./new-item";
-import { PrimeiroItem } from "./first-item";
+import { readLocalDb } from "@/local-db/read-local-db";
+import { useLocalQuery } from "@/local-db/use-local-query";
+import { buildMenu } from "@/lib/menu";
+import { initialDay, activeDays } from "@/lib/days";
+import { FirstDay } from "../day/first-day";
+import { SmoothSwap } from "../transitions/smooth-swap";
+import { DayPicker } from "../day/day-picker";
+import { MenuIcon } from "../icons/menu-icon";
+import { Breadcrumb } from "../breadcrumb";
+import { ItemsWithoutDay } from "./items-without-day";
+import { ItemList } from "./item-list";
+import { NewItem } from "./new-item";
+import { FirstItem } from "./first-item";
 
 
-export function Cardapio() {
-  const dados = useLeituraLocal(lerBancoLocal);
-  const [diaId, setDiaId] = useState<string | null>(null);
-  const [novoAberto, setNovoAberto] = useState(false);
-  const escolherDia = (id: string) => startTransition(() => setDiaId(id));
+export function Menu() {
+  const data = useLocalQuery(readLocalDb);
+  const [dayId, setDayId] = useState<string | null>(null);
+  const [newOpen, setNewOpen] = useState(false);
+  const selectDay = (id: string) => startTransition(() => setDayId(id));
 
-  const adicionar = (
-    <Button onClick={() => setNovoAberto(true)}>
+  const addButton = (
+    <Button onClick={() => setNewOpen(true)}>
       <Plus className="size-3.5" strokeWidth={2.4} />
       Adicionar item
     </Button>
   );
 
-  if (!dados) {
+  if (!data) {
     return (
       <>
-        <Migalha Icone={IconeCardapio} titulo="Cardápio" />
+        <Breadcrumb Icon={MenuIcon} title="Cardápio" />
         <p className="text-[11px] text-muted-foreground" role="status">
           Carregando…
         </p>
@@ -42,17 +42,17 @@ export function Cardapio() {
     );
   }
 
-  const dias = diasAtivos(dados.dias);
-  const dia = dias.find((d) => d.id === diaId) ?? diaInicial(dias, dados.hoje);
-  const produtosAtivos = dados.produtos
-    .filter((p) => p.ativo)
-    .sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"));
+  const days = activeDays(data.days);
+  const day = days.find((d) => d.id === dayId) ?? initialDay(days, data.today);
+  const activeProducts = data.products
+    .filter((p) => p.active)
+    .sort((a, b) => a.name.localeCompare(b.name, "pt-BR"));
 
   return (
     <>
-      <Migalha Icone={IconeCardapio} titulo="Cardápio">
-        {adicionar}
-      </Migalha>
+      <Breadcrumb Icon={MenuIcon} title="Cardápio">
+        {addButton}
+      </Breadcrumb>
 
       <section className="flex flex-col gap-3 desk:flex-row desk:flex-wrap desk:items-end desk:justify-between desk:gap-4">
         <div className="flex items-start justify-between gap-2.5">
@@ -63,7 +63,7 @@ export function Cardapio() {
             </span>
           </div>
           <Button
-            onClick={() => setNovoAberto(true)}
+            onClick={() => setNewOpen(true)}
             aria-label="Adicionar item"
             className="h-9 flex-none rounded-[9px] tablet:hidden"
           >
@@ -71,26 +71,26 @@ export function Cardapio() {
             Item
           </Button>
         </div>
-        {dia && <SeletorDeDia dias={dias} hoje={dados.hoje} diaId={dia.id} aoEscolher={escolherDia} />}
+        {day && <DayPicker days={days} today={data.today} dayId={day.id} onSelect={selectDay} />}
       </section>
 
-      {novoAberto && <NovoItem diaId={dia?.id ?? null} aoFechar={() => setNovoAberto(false)} />}
+      {newOpen && <NewItem dayId={day?.id ?? null} onClose={() => setNewOpen(false)} />}
 
-      {dia ? (
-        <TrocaSuave>
-          <ListaDeItens key={dia.id} dia={dia} cardapio={montarCardapio(dados, dia.id)} />
-        </TrocaSuave>
-      ) : produtosAtivos.length > 0 ? (
+      {day ? (
+        <SmoothSwap>
+          <ItemList key={day.id} day={day} menu={buildMenu(data, day.id)} />
+        </SmoothSwap>
+      ) : activeProducts.length > 0 ? (
         <>
-          <PrimeiroDia
-            hoje={dados.hoje}
-            aoEscolherDia={escolherDia}
-            descricao="Agora crie o primeiro dia de venda. Os itens cadastrados entram à venda nele com o preço padrão."
+          <FirstDay
+            today={data.today}
+            onSelectDay={selectDay}
+            description="Agora crie o primeiro dia de venda. Os itens cadastrados entram à venda nele com o preço padrão."
           />
-          <ItensSemDia produtos={produtosAtivos} />
+          <ItemsWithoutDay products={activeProducts} />
         </>
       ) : (
-        !novoAberto && <PrimeiroItem aoAdicionar={() => setNovoAberto(true)} />
+        !newOpen && <FirstItem onAdd={() => setNewOpen(true)} />
       )}
     </>
   );

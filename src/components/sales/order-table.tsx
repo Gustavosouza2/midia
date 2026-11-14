@@ -3,15 +3,15 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { paginar, type PedidoDoDia } from "@/lib/sales";
-import { AcoesDoPedido } from "./order-actions";
-import { Valor } from "./order-amount";
+import { paginate, type DayOrder } from "@/lib/sales";
+import { OrderActions } from "./order-actions";
+import { OrderAmount } from "./order-amount";
 
-export function Tabela({ pedidos }: { pedidos: PedidoDoDia[] }) {
-  const [pagina, setPagina] = useState(1);
-  const atual = paginar(pedidos, pagina);
-  const celula = "border-b border-border px-5 py-3 group-last:border-b-0";
-  const cabecalho = "border-b border-border bg-muted px-5 py-2.5 text-[11px] font-medium text-muted-foreground";
+export function OrderTable({ orders }: { orders: DayOrder[] }) {
+  const [page, setPage] = useState(1);
+  const current = paginate(orders, page);
+  const cellClass = "border-b border-border px-5 py-3 group-last:border-b-0";
+  const headerClass = "border-b border-border bg-muted px-5 py-2.5 text-[11px] font-medium text-muted-foreground";
 
   return (
     <Card className="hidden tablet:flex">
@@ -19,24 +19,24 @@ export function Tabela({ pedidos }: { pedidos: PedidoDoDia[] }) {
         <table className="w-full border-collapse">
           <thead>
             <tr>
-              <th className={`${cabecalho} text-left`}>Nome</th>
-              <th className={`${cabecalho} text-left`}>Item</th>
-              <th className={`${cabecalho} text-right`}>Valor</th>
-              <th className={`${cabecalho} text-left`}>Hora</th>
-              <th className={`${cabecalho} w-[220px] text-right`}>Status</th>
+              <th className={`${headerClass} text-left`}>Nome</th>
+              <th className={`${headerClass} text-left`}>Item</th>
+              <th className={`${headerClass} text-right`}>Valor</th>
+              <th className={`${headerClass} text-left`}>Hora</th>
+              <th className={`${headerClass} w-[220px] text-right`}>Status</th>
             </tr>
           </thead>
           <tbody>
-            {atual.itens.map((p) => (
+            {current.items.map((p) => (
               <tr key={p.id} className="group animate-in duration-300 fade-in">
-                <td className={`${celula} font-semibold`}>{p.nome}</td>
-                <td className={`${celula} text-text-2`}>{p.descricao}</td>
-                <td className={`${celula} text-right whitespace-nowrap`}>
-                  <Valor pedido={p} />
+                <td className={`${cellClass} font-semibold`}>{p.name}</td>
+                <td className={`${cellClass} text-text-2`}>{p.description}</td>
+                <td className={`${cellClass} text-right whitespace-nowrap`}>
+                  <OrderAmount order={p} />
                 </td>
-                <td className={`${celula} whitespace-nowrap text-muted-foreground`}>{p.hora}</td>
-                <td className={`${celula} py-2 text-right whitespace-nowrap`}>
-                  <AcoesDoPedido pedido={p} onde="tabela" />
+                <td className={`${cellClass} whitespace-nowrap text-muted-foreground`}>{p.time}</td>
+                <td className={`${cellClass} py-2 text-right whitespace-nowrap`}>
+                  <OrderActions order={p} placement="table" />
                 </td>
               </tr>
             ))}
@@ -44,24 +44,24 @@ export function Tabela({ pedidos }: { pedidos: PedidoDoDia[] }) {
         </table>
       </div>
 
-      {atual.totalPaginas > 1 && (
+      {current.totalPages > 1 && (
         <nav
           aria-label="Páginas"
           className="flex flex-wrap items-center justify-between gap-2.5 border-t border-border bg-muted px-5 py-2.5"
         >
-          <span className="text-[11px] text-muted-foreground">{atual.faixa}</span>
+          <span className="text-[11px] text-muted-foreground">{current.range}</span>
           <div className="flex items-center gap-1">
-            <Button variant="outline" size="sm" disabled={atual.pagina === 1} onClick={() => setPagina(atual.pagina - 1)}>
+            <Button variant="outline" size="sm" disabled={current.page === 1} onClick={() => setPage(current.page - 1)}>
               ‹ Anterior
             </Button>
-            {Array.from({ length: atual.totalPaginas }, (_, i) => i + 1).map((n) => (
+            {Array.from({ length: current.totalPages }, (_, i) => i + 1).map((n) => (
               <Button
                 key={n}
-                variant={n === atual.pagina ? "default" : "outline"}
+                variant={n === current.page ? "default" : "outline"}
                 size="icon-sm"
                 aria-label={`Página ${n}`}
-                aria-current={n === atual.pagina ? "page" : undefined}
-                onClick={() => setPagina(n)}
+                aria-current={n === current.page ? "page" : undefined}
+                onClick={() => setPage(n)}
               >
                 {n}
               </Button>
@@ -69,8 +69,8 @@ export function Tabela({ pedidos }: { pedidos: PedidoDoDia[] }) {
             <Button
               variant="outline"
               size="sm"
-              disabled={atual.pagina === atual.totalPaginas}
-              onClick={() => setPagina(atual.pagina + 1)}
+              disabled={current.page === current.totalPages}
+              onClick={() => setPage(current.page + 1)}
             >
               Próxima ›
             </Button>

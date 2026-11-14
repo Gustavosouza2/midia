@@ -3,8 +3,8 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "cn";
 import { Slot } from "radix-ui";
 
-// Botões do DESIGN.md: 34px de altura, raio 8px, texto 12px. `outline` é o botão
-// secundário (borda `input`, fundo branco); `sm` (30px) é a paginação da tabela.
+// DESIGN.md buttons: 34px tall, 8px radius, 12px text. `outline` is the secondary
+// button (`input` border, white background); `sm` (30px) is the table pagination.
 const buttonVariants = cva(
   "inline-flex shrink-0 items-center justify-center gap-2 rounded-lg text-xs whitespace-nowrap transition-colors outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0",
   {

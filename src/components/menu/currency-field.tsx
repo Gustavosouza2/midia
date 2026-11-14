@@ -2,8 +2,8 @@ import type { ComponentProps } from "react";
 import { cn } from "cn";
 import { Input } from "@/components/ui/input";
 
-/** Campo de valor com o "R$" dentro, à esquerda. */
-export function CampoDeReais({ className, ...props }: ComponentProps<typeof Input>) {
+/** Amount input with "R$" inside, on the left. */
+export function CurrencyField({ className, ...props }: ComponentProps<typeof Input>) {
   return (
     <div className="relative">
       <span

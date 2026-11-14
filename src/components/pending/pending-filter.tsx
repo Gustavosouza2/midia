@@ -1,31 +1,31 @@
 "use client";
 
 import { Search } from "lucide-react";
-import { FiltroDeDia } from "@/components/day/day-filter";
+import { DayFilter } from "@/components/day/day-filter";
 import { Input } from "@/components/ui/input";
-import type { DiaDeVenda } from "@/local-db";
-import type { Periodo } from "@/lib/dashboard";
+import type { SaleDay } from "@/local-db";
+import type { Period } from "@/lib/dashboard";
 
-/** Filtro de dia (só filtra: sem "+ Novo dia de venda") e a busca por pessoa. */
-export function FiltroDePendentes({
-  dias,
-  hoje,
-  periodo,
-  aoEscolher,
-  busca,
-  aoBuscar,
+/** Day filter (filter only: no "+ Novo dia de venda") and the person search. */
+export function PendingFilter({
+  days,
+  today,
+  period,
+  onSelect,
+  search,
+  onSearch,
 }: {
-  dias: DiaDeVenda[];
-  hoje: string;
-  periodo: Periodo;
-  aoEscolher: (periodo: Periodo) => void;
-  busca: string;
-  aoBuscar: (busca: string) => void;
+  days: SaleDay[];
+  today: string;
+  period: Period;
+  onSelect: (period: Period) => void;
+  search: string;
+  onSearch: (search: string) => void;
 }) {
   return (
     <div className="contents tablet:order-1 tablet:flex tablet:flex-wrap tablet:items-center tablet:justify-between tablet:gap-3">
       <div className="order-1 min-w-0">
-        <FiltroDeDia dias={dias} hoje={hoje} valor={periodo} aoEscolher={aoEscolher} rotulo="Dia de venda" todos />
+        <DayFilter days={days} today={today} value={period} onSelect={onSelect} label="Dia de venda" all />
       </div>
 
       <div className="relative order-3 tablet:w-60 tablet:max-w-full">
@@ -37,8 +37,8 @@ export function FiltroDePendentes({
           type="search"
           aria-label="Buscar pessoa"
           placeholder="Buscar pessoa"
-          value={busca}
-          onChange={(e) => aoBuscar(e.target.value)}
+          value={search}
+          onChange={(e) => onSearch(e.target.value)}
           className="bg-background pl-9 tablet:pl-8"
         />
       </div>

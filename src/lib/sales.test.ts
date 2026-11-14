@@ -1,290 +1,290 @@
 import { describe, expect, it } from "vitest";
-import type { Cliente, ItemPedido, Pagamento, Pedido, PrecoDoDia, Produto } from "@/local-db";
-import { lerPreco, montarVendas, paginar, rotuloPago, textoDoPreco, type DadosVendas } from "./sales";
+import type { Customer, OrderItem, Payment, Order, DayMenuItem, Product } from "@/local-db";
+import { parsePrice, buildSales, paginate, paidLabel, formatPriceInput, type SalesData } from "./sales";
 
-const CANTINA = "c0000000-0000-4000-8000-000000000000";
-const DIA = "d0000000-0000-4000-8000-000000000001";
-const OUTRO_DIA = "d0000000-0000-4000-8000-000000000002";
-const sync = { atualizadoEm: "2026-11-01T00:00:00.000Z", seq: 1 };
-let contador = 0;
-const novoId = () => `00000000-0000-4000-8000-${String(++contador).padStart(12, "0")}`;
+const CANTEEN = "c0000000-0000-4000-8000-000000000000";
+const DAY = "d0000000-0000-4000-8000-000000000001";
+const OTHER_DAY = "d0000000-0000-4000-8000-000000000002";
+const sync = { updatedAt: "2026-11-01T00:00:00.000Z", seq: 1 };
+let badgeCount = 0;
+const newId = () => `00000000-0000-4000-8000-${String(++badgeCount).padStart(12, "0")}`;
 
-/** Hora local do aparelho em ISO, para os testes não dependerem do fuso. */
-const as = (hora: number, minuto: number, dia = 1) => new Date(2026, 10, dia, hora, minuto).toISOString();
+/** The device's local time in ISO, so the tests do not depend on the time zone. */
+const at = (time: number, minute: number, day = 1) => new Date(2026, 10, day, time, minute).toISOString();
 
-function banco() {
-  const dados: DadosVendas = { pedidos: [], itens: [], pagamentos: [], produtos: [], clientes: [], precosDoDia: [] };
+function fixtures() {
+  const data: SalesData = { orders: [], items: [], payments: [], products: [], customers: [], dayMenuItems: [] };
 
-  const produto = (nome: string, preco: number, ativo = true): Produto => {
-    const p: Produto = { id: novoId(), cantinaId: CANTINA, nome, precoCentavos: preco, ativo, ...sync };
-    dados.produtos.push(p);
+  const product = (name: string, price: number, active = true): Product => {
+    const p: Product = { id: newId(), canteenId: CANTEEN, name, priceCents: price, active, ...sync };
+    data.products.push(p);
     return p;
   };
-  const noCardapio = (p: Produto, preco: number, ativo = true, diaId = DIA, quantidade: number | null = null) => {
-    const linha: PrecoDoDia = {
-      id: novoId(),
-      cantinaId: CANTINA,
-      diaId,
-      produtoId: p.id,
-      precoCentavos: preco,
-      ativo,
-      quantidade,
+  const onMenu = (p: Product, price: number, active = true, dayId = DAY, quantity: number | null = null) => {
+    const row: DayMenuItem = {
+      id: newId(),
+      canteenId: CANTEEN,
+      dayId,
+      productId: p.id,
+      priceCents: price,
+      active,
+      quantity,
       ...sync,
     };
-    dados.precosDoDia.push(linha);
+    data.dayMenuItems.push(row);
   };
-  const pagar = (pedidoId: string, valor: number, forma: "pix" | "dinheiro" = "pix", estornado = false) => {
-    const pg: Pagamento = {
-      id: novoId(),
-      pedidoId,
-      cantinaId: CANTINA,
-      valorCentavos: valor,
-      forma,
-      vendedorId: null,
-      registradoEm: sync.atualizadoEm,
-      estornadoEm: estornado ? sync.atualizadoEm : null,
+  const pay = (orderId: string, amount: number, method: "pix" | "dinheiro" = "pix", refunded = false) => {
+    const pg: Payment = {
+      id: newId(),
+      orderId,
+      canteenId: CANTEEN,
+      amountCents: amount,
+      method,
+      sellerId: null,
+      recordedAt: sync.updatedAt,
+      refundedAt: refunded ? sync.updatedAt : null,
       ...sync,
     };
-    dados.pagamentos.push(pg);
+    data.payments.push(pg);
     return pg;
   };
-  const pedido = (
-    nome: string | null,
-    itens: [Produto, number, number][],
-    opcoes: { reserva?: boolean; criadoEm?: string; diaId?: string; cancelado?: boolean } = {},
-  ): Pedido => {
-    let clienteId: string | null = null;
-    if (nome) {
-      const cliente: Cliente = { id: novoId(), cantinaId: CANTINA, nome, telefone: null, ...sync };
-      dados.clientes.push(cliente);
-      clienteId = cliente.id;
+  const order = (
+    name: string | null,
+    items: [Product, number, number][],
+    options: { reservation?: boolean; createdAt?: string; dayId?: string; canceled?: boolean } = {},
+  ): Order => {
+    let customerId: string | null = null;
+    if (name) {
+      const customer: Customer = { id: newId(), canteenId: CANTEEN, name, phone: null, ...sync };
+      data.customers.push(customer);
+      customerId = customer.id;
     }
-    const p: Pedido = {
-      id: novoId(),
-      cantinaId: CANTINA,
-      diaId: opcoes.diaId ?? DIA,
-      clienteId,
-      origem: "balcao",
-      status: opcoes.cancelado ? "cancelado" : opcoes.reserva ? "recebido" : "entregue",
-      vendedorId: null,
-      criadoEm: opcoes.criadoEm ?? as(20, 0),
-      entregueEm: null,
+    const p: Order = {
+      id: newId(),
+      canteenId: CANTEEN,
+      dayId: options.dayId ?? DAY,
+      customerId,
+      origin: "balcao",
+      status: options.canceled ? "cancelado" : options.reservation ? "recebido" : "entregue",
+      sellerId: null,
+      createdAt: options.createdAt ?? at(20, 0),
+      deliveredAt: null,
       ...sync,
     };
-    dados.pedidos.push(p);
-    for (const [prod, qtd, preco] of itens) {
-      const item: ItemPedido = {
-        id: novoId(),
-        pedidoId: p.id,
-        cantinaId: CANTINA,
-        produtoId: prod.id,
-        quantidade: qtd,
-        precoUnitarioCentavos: preco,
-        canceladoEm: null,
+    data.orders.push(p);
+    for (const [prod, qty, price] of items) {
+      const item: OrderItem = {
+        id: newId(),
+        orderId: p.id,
+        canteenId: CANTEEN,
+        productId: prod.id,
+        quantity: qty,
+        unitPriceCents: price,
+        canceledAt: null,
         ...sync,
       };
-      dados.itens.push(item);
+      data.items.push(item);
     }
     return p;
   };
-  return { dados, produto, noCardapio, pedido, pagar };
+  return { data, product, onMenu, order, pay };
 }
 
-describe("montarVendas", () => {
-  it("deriva o status: pago, pendente (inclusive parcial ou estornado) e reservado", () => {
-    const b = banco();
-    const espeto = b.produto("Espeto", 1200);
-    const pago = b.pedido("Ana", [[espeto, 2, 1200]]);
-    b.pagar(pago.id, 2400, "dinheiro");
-    const parcial = b.pedido("Bia", [[espeto, 2, 1200]]);
-    b.pagar(parcial.id, 1000);
-    const estornado = b.pedido("Caio", [[espeto, 1, 1200]]);
-    b.pagar(estornado.id, 1200, "pix", true);
-    const reserva = b.pedido("Davi", [[espeto, 3, 1200]], { reserva: true });
-    b.pagar(reserva.id, 3600);
+describe("buildSales", () => {
+  it("derives the status: paid, pending (including partial or refunded) and reserved", () => {
+    const b = fixtures();
+    const skewer = b.product("Espeto", 1200);
+    const paid = b.order("Ana", [[skewer, 2, 1200]]);
+    b.pay(paid.id, 2400, "dinheiro");
+    const partial = b.order("Bia", [[skewer, 2, 1200]]);
+    b.pay(partial.id, 1000);
+    const refunded = b.order("Caio", [[skewer, 1, 1200]]);
+    b.pay(refunded.id, 1200, "pix", true);
+    const reservation = b.order("Davi", [[skewer, 3, 1200]], { reservation: true });
+    b.pay(reservation.id, 3600);
 
-    const porId = new Map(montarVendas(b.dados, DIA).pedidos.map((p) => [p.id, p]));
+    const byId = new Map(buildSales(b.data, DAY).orders.map((p) => [p.id, p]));
 
-    expect(porId.get(pago.id)).toMatchObject({ status: "pago", aberto: 0, formas: ["dinheiro"] });
-    expect(porId.get(parcial.id)).toMatchObject({ status: "pendente", aberto: 1400, formas: ["pix"] });
-    expect(porId.get(estornado.id)).toMatchObject({ status: "pendente", aberto: 1200, formas: [], pagamentosAtivos: [] });
-    expect(porId.get(reserva.id)).toMatchObject({ status: "reservado", aberto: 0 });
+    expect(byId.get(paid.id)).toMatchObject({ status: "paid", due: 0, methods: ["dinheiro"] });
+    expect(byId.get(partial.id)).toMatchObject({ status: "pending", due: 1400, methods: ["pix"] });
+    expect(byId.get(refunded.id)).toMatchObject({ status: "pending", due: 1200, methods: [], activePayments: [] });
+    expect(byId.get(reservation.id)).toMatchObject({ status: "reserved", due: 0 });
   });
 
-  it("soma os números do dia sem contar reservas como vendidas", () => {
-    const b = banco();
-    const espeto = b.produto("Espeto", 1200);
-    const pago = b.pedido("Ana", [[espeto, 2, 1200]]);
-    b.pagar(pago.id, 2400);
-    b.pedido("Bia", [[espeto, 1, 1000]]);
-    // Pagamento maior que o pedido não aumenta o recebido.
-    const aMais = b.pedido("Caio", [[espeto, 1, 1200]]);
-    b.pagar(aMais.id, 5000);
-    b.pedido("Davi", [[espeto, 3, 1200]], { reserva: true });
-    b.pedido("Eva", [[espeto, 9, 1200]], { diaId: OUTRO_DIA });
-    b.pedido("Fábio", [[espeto, 9, 1200]], { cancelado: true });
+  it("sums the day's stats without counting reservations as sold", () => {
+    const b = fixtures();
+    const skewer = b.product("Espeto", 1200);
+    const paid = b.order("Ana", [[skewer, 2, 1200]]);
+    b.pay(paid.id, 2400);
+    b.order("Bia", [[skewer, 1, 1000]]);
+    // A payment larger than the order does not increase the received amount.
+    const extra = b.order("Caio", [[skewer, 1, 1200]]);
+    b.pay(extra.id, 5000);
+    b.order("Davi", [[skewer, 3, 1200]], { reservation: true });
+    b.order("Eva", [[skewer, 9, 1200]], { dayId: OTHER_DAY });
+    b.order("Fábio", [[skewer, 9, 1200]], { canceled: true });
 
-    const { numeros, totalDoDia } = montarVendas(b.dados, DIA);
+    const { stats, dayTotal } = buildSales(b.data, DAY);
 
-    expect(numeros).toEqual({
-      itens: 4,
-      vendido: 4600,
-      recebido: 3600,
-      pendente: 1000,
-      pedidosPendentes: 1,
-      reservas: 1,
-      itensReservados: 3,
-      valorReservas: 3600,
+    expect(stats).toEqual({
+      items: 4,
+      sold: 4600,
+      received: 3600,
+      pending: 1000,
+      pendingOrders: 1,
+      reservations: 1,
+      reservedItems: 3,
+      reservationsAmount: 3600,
     });
-    expect(totalDoDia).toBe(4);
+    expect(dayTotal).toBe(4);
   });
 
-  it("descreve o pedido com nome, itens, preço unitário e hora local", () => {
-    const b = banco();
-    const espeto = b.produto("Espeto", 1200);
-    const refri = b.produto("Refri", 600);
-    const um = b.pedido("Ana", [[espeto, 2, 1100]], { criadoEm: as(20, 5) });
-    const dois = b.pedido(null, [[espeto, 1, 1200], [refri, 2, 600]], { criadoEm: as(9, 30) });
-    const reserva = b.pedido("Bia", [[espeto, 1, 1200]], { reserva: true, criadoEm: as(10, 0, 8) });
+  it("describes the order with name, items, unit price and local time", () => {
+    const b = fixtures();
+    const skewer = b.product("Espeto", 1200);
+    const soda = b.product("Refri", 600);
+    const one = b.order("Ana", [[skewer, 2, 1100]], { createdAt: at(20, 5) });
+    const two = b.order(null, [[skewer, 1, 1200], [soda, 2, 600]], { createdAt: at(9, 30) });
+    const reservation = b.order("Bia", [[skewer, 1, 1200]], { reservation: true, createdAt: at(10, 0, 8) });
 
-    const porId = new Map(montarVendas(b.dados, DIA).pedidos.map((p) => [p.id, p]));
+    const byId = new Map(buildSales(b.data, DAY).orders.map((p) => [p.id, p]));
 
-    expect(porId.get(um.id)).toMatchObject({
-      nome: "Ana",
-      descricao: "2× Espeto",
-      valor: 2200,
-      precoUnitario: 1100,
-      hora: "20:05",
+    expect(byId.get(one.id)).toMatchObject({
+      name: "Ana",
+      description: "2× Espeto",
+      amount: 2200,
+      unitPrice: 1100,
+      time: "20:05",
     });
-    expect(porId.get(dois.id)).toMatchObject({
-      nome: "Sem nome",
-      descricao: "1× Espeto, 2× Refri",
-      valor: 2400,
-      precoUnitario: null,
-      hora: "09:30",
+    expect(byId.get(two.id)).toMatchObject({
+      name: "Sem nome",
+      description: "1× Espeto, 2× Refri",
+      amount: 2400,
+      unitPrice: null,
+      time: "09:30",
     });
-    expect(porId.get(reserva.id)?.hora).toBe("reservou 08 nov");
+    expect(byId.get(reservation.id)?.time).toBe("reservou 08 nov");
   });
 
-  it("ordena do mais novo para o mais antigo", () => {
-    const b = banco();
-    const espeto = b.produto("Espeto", 1200);
-    b.pedido("Primeiro", [[espeto, 1, 1200]], { criadoEm: as(18, 0) });
-    b.pedido("Terceiro", [[espeto, 1, 1200]], { criadoEm: as(21, 0) });
-    b.pedido("Segundo", [[espeto, 1, 1200]], { criadoEm: as(19, 0) });
+  it("sorts newest first", () => {
+    const b = fixtures();
+    const skewer = b.product("Espeto", 1200);
+    b.order("Primeiro", [[skewer, 1, 1200]], { createdAt: at(18, 0) });
+    b.order("Terceiro", [[skewer, 1, 1200]], { createdAt: at(21, 0) });
+    b.order("Segundo", [[skewer, 1, 1200]], { createdAt: at(19, 0) });
 
-    expect(montarVendas(b.dados, DIA).pedidos.map((p) => p.nome)).toEqual(["Terceiro", "Segundo", "Primeiro"]);
+    expect(buildSales(b.data, DAY).orders.map((p) => p.name)).toEqual(["Terceiro", "Segundo", "Primeiro"]);
   });
 
-  it("busca pelo nome sem diferenciar maiúsculas e acentos, e filtra pelo status", () => {
-    const b = banco();
-    const espeto = b.produto("Espeto", 1200);
-    const pago = b.pedido("Júlia", [[espeto, 1, 1200]]);
-    b.pagar(pago.id, 1200);
-    b.pedido("Julio", [[espeto, 1, 1200]]);
-    b.pedido("Ana", [[espeto, 1, 1200]], { reserva: true });
+  it("searches by name ignoring case and accents, and filters by status", () => {
+    const b = fixtures();
+    const skewer = b.product("Espeto", 1200);
+    const paid = b.order("Júlia", [[skewer, 1, 1200]]);
+    b.pay(paid.id, 1200);
+    b.order("Julio", [[skewer, 1, 1200]]);
+    b.order("Ana", [[skewer, 1, 1200]], { reservation: true });
 
-    const nomes = (busca: string, filtro?: "todos" | "reservado" | "pendente" | "pago") =>
-      montarVendas(b.dados, DIA, { busca, filtro }).pedidos.map((p) => p.nome).sort();
+    const names = (search: string, filter?: "all" | "reserved" | "pending" | "paid") =>
+      buildSales(b.data, DAY, { search, filter }).orders.map((p) => p.name).sort();
 
-    expect(nomes("JULI")).toEqual(["Julio", "Júlia"]);
-    expect(nomes(" júl ")).toEqual(["Julio", "Júlia"]);
-    expect(nomes("", "pago")).toEqual(["Júlia"]);
-    expect(nomes("", "pendente")).toEqual(["Julio"]);
-    expect(nomes("", "reservado")).toEqual(["Ana"]);
-    expect(nomes("ana", "pago")).toEqual([]);
+    expect(names("JULI")).toEqual(["Julio", "Júlia"]);
+    expect(names(" júl ")).toEqual(["Julio", "Júlia"]);
+    expect(names("", "paid")).toEqual(["Júlia"]);
+    expect(names("", "pending")).toEqual(["Julio"]);
+    expect(names("", "reserved")).toEqual(["Ana"]);
+    expect(names("ana", "paid")).toEqual([]);
   });
 
-  it("monta o quadro com a busca, sem o filtro de status, e soma o que falta nos pendentes", () => {
-    const b = banco();
-    const espeto = b.produto("Espeto", 1000);
-    const parcial = b.pedido("Ana", [[espeto, 2, 1000]]);
-    b.pagar(parcial.id, 500);
-    const pago = b.pedido("Bia", [[espeto, 1, 1000]]);
-    b.pagar(pago.id, 1000);
-    b.pedido("Caio", [[espeto, 3, 1000]], { reserva: true });
+  it("builds the board with the search, without the status filter, and sums what is left on pending orders", () => {
+    const b = fixtures();
+    const skewer = b.product("Espeto", 1000);
+    const partial = b.order("Ana", [[skewer, 2, 1000]]);
+    b.pay(partial.id, 500);
+    const paid = b.order("Bia", [[skewer, 1, 1000]]);
+    b.pay(paid.id, 1000);
+    b.order("Caio", [[skewer, 3, 1000]], { reservation: true });
 
-    const quadro = montarVendas(b.dados, DIA, { filtro: "pago" }).quadro;
+    const board = buildSales(b.data, DAY, { filter: "paid" }).board;
 
-    expect(quadro.map((c) => [c.status, c.pedidos.length, c.total])).toEqual([
-      ["reservado", 1, 3000],
-      ["pendente", 1, 1500],
-      ["pago", 1, 1000],
+    expect(board.map((c) => [c.status, c.orders.length, c.total])).toEqual([
+      ["reserved", 1, 3000],
+      ["pending", 1, 1500],
+      ["paid", 1, 1000],
     ]);
-    expect(montarVendas(b.dados, DIA, { busca: "bia" }).quadro.map((c) => c.pedidos.length)).toEqual([0, 0, 1]);
+    expect(buildSales(b.data, DAY, { search: "bia" }).board.map((c) => c.orders.length)).toEqual([0, 0, 1]);
   });
 
-  it("o cardápio do dia traz só itens à venda, com o preço do dia, por nome", () => {
-    const b = banco();
-    const refri = b.produto("Refri", 600);
-    const espeto = b.produto("Espeto", 1200);
-    const fora = b.produto("Pastel", 800);
-    const inativo = b.produto("Suco", 500, false);
-    b.noCardapio(refri, 700);
-    b.noCardapio(espeto, 1000);
-    b.noCardapio(fora, 800, false);
-    b.noCardapio(inativo, 500);
-    b.noCardapio(fora, 800, true, OUTRO_DIA);
+  it("the day's menu has only items for sale, at the day price, by name", () => {
+    const b = fixtures();
+    const soda = b.product("Refri", 600);
+    const skewer = b.product("Espeto", 1200);
+    const offMenu = b.product("Pastel", 800);
+    const inactive = b.product("Suco", 500, false);
+    b.onMenu(soda, 700);
+    b.onMenu(skewer, 1000);
+    b.onMenu(offMenu, 800, false);
+    b.onMenu(inactive, 500);
+    b.onMenu(offMenu, 800, true, OTHER_DAY);
 
-    expect(montarVendas(b.dados, DIA).cardapio).toEqual([
-      { produtoId: espeto.id, nome: "Espeto", precoCentavos: 1000, restantes: null },
-      { produtoId: refri.id, nome: "Refri", precoCentavos: 700, restantes: null },
+    expect(buildSales(b.data, DAY).menu).toEqual([
+      { productId: skewer.id, name: "Espeto", priceCents: 1000, remaining: null },
+      { productId: soda.id, name: "Refri", priceCents: 700, remaining: null },
     ]);
   });
 
-  it("cada item do cardápio diz quanto resta no dia, descontando vendas e reservas", () => {
-    const b = banco();
-    const espeto = b.produto("Espeto", 1200);
-    const refri = b.produto("Refri", 600);
-    b.noCardapio(espeto, 1200, true, DIA, 5);
-    b.noCardapio(refri, 600, true, DIA, 2);
-    b.pedido("Ana", [[espeto, 2, 1200]]);
-    b.pedido("Bia", [[espeto, 1, 1200]], { reserva: true });
-    b.pedido("Caio", [[refri, 2, 600]]);
+  it("each menu item says how much remains on the day, deducting sales and reservations", () => {
+    const b = fixtures();
+    const skewer = b.product("Espeto", 1200);
+    const soda = b.product("Refri", 600);
+    b.onMenu(skewer, 1200, true, DAY, 5);
+    b.onMenu(soda, 600, true, DAY, 2);
+    b.order("Ana", [[skewer, 2, 1200]]);
+    b.order("Bia", [[skewer, 1, 1200]], { reservation: true });
+    b.order("Caio", [[soda, 2, 600]]);
 
-    expect(montarVendas(b.dados, DIA).cardapio.map((i) => [i.nome, i.restantes])).toEqual([
+    expect(buildSales(b.data, DAY).menu.map((i) => [i.name, i.remaining])).toEqual([
       ["Espeto", 2],
       ["Refri", 0],
     ]);
   });
 });
 
-describe("paginar", () => {
-  const lista = Array.from({ length: 13 }, (_, i) => i + 1);
+describe("paginate", () => {
+  const list = Array.from({ length: 13 }, (_, i) => i + 1);
 
-  it("corta de 6 em 6 e descreve a faixa", () => {
-    expect(paginar(lista, 1)).toEqual({ itens: [1, 2, 3, 4, 5, 6], pagina: 1, totalPaginas: 3, faixa: "Mostrando 1–6 de 13" });
-    expect(paginar(lista, 3)).toMatchObject({ itens: [13], faixa: "Mostrando 13–13 de 13" });
+  it("slices 6 at a time and describes the range", () => {
+    expect(paginate(list, 1)).toEqual({ items: [1, 2, 3, 4, 5, 6], page: 1, totalPages: 3, range: "Mostrando 1–6 de 13" });
+    expect(paginate(list, 3)).toMatchObject({ items: [13], range: "Mostrando 13–13 de 13" });
   });
 
-  it("limita a página ao intervalo válido", () => {
-    expect(paginar(lista, 9).pagina).toBe(3);
-    expect(paginar(lista, 0).pagina).toBe(1);
-    expect(paginar([], 1)).toEqual({ itens: [], pagina: 1, totalPaginas: 1, faixa: "Nenhum pedido" });
-  });
-});
-
-describe("preço digitado", () => {
-  it("lê reais com vírgula ou ponto em centavos", () => {
-    expect(lerPreco("12")).toBe(1200);
-    expect(lerPreco(" 12,5 ")).toBe(1250);
-    expect(lerPreco("12.05")).toBe(1205);
-    expect(lerPreco("0")).toBe(0);
-  });
-
-  it("recusa o que não é um valor", () => {
-    for (const texto of ["", "abc", "-3", "1,234", "1.2.3"]) expect(lerPreco(texto)).toBeNull();
-  });
-
-  it("escreve o preço do cardápio no campo", () => {
-    expect(textoDoPreco(1200)).toBe("12");
-    expect(textoDoPreco(1250)).toBe("12,50");
-    expect(textoDoPreco(5)).toBe("0,05");
+  it("clamps the page to the valid range", () => {
+    expect(paginate(list, 9).page).toBe(3);
+    expect(paginate(list, 0).page).toBe(1);
+    expect(paginate([], 1)).toEqual({ items: [], page: 1, totalPages: 1, range: "Nenhum pedido" });
   });
 });
 
-it("rotuloPago mostra a forma", () => {
-  expect(rotuloPago(["pix"])).toBe("Pago · Pix");
-  expect(rotuloPago(["pix", "dinheiro"])).toBe("Pago · Pix + Dinheiro");
-  expect(rotuloPago([])).toBe("Pago");
+describe("typed price", () => {
+  it("reads reais with comma or dot into cents", () => {
+    expect(parsePrice("12")).toBe(1200);
+    expect(parsePrice(" 12,5 ")).toBe(1250);
+    expect(parsePrice("12.05")).toBe(1205);
+    expect(parsePrice("0")).toBe(0);
+  });
+
+  it("refuses what is not an amount", () => {
+    for (const text of ["", "abc", "-3", "1,234", "1.2.3"]) expect(parsePrice(text)).toBeNull();
+  });
+
+  it("writes the menu price into the input", () => {
+    expect(formatPriceInput(1200)).toBe("12");
+    expect(formatPriceInput(1250)).toBe("12,50");
+    expect(formatPriceInput(5)).toBe("0,05");
+  });
+});
+
+it("paidLabel shows the method", () => {
+  expect(paidLabel(["pix"])).toBe("Pago · Pix");
+  expect(paidLabel(["pix", "dinheiro"])).toBe("Pago · Pix + Dinheiro");
+  expect(paidLabel([])).toBe("Pago");
 });

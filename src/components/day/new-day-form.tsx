@@ -5,70 +5,70 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import { getLocalDb, type DiaDeVenda } from "@/local-db";
-import { criarDia, ErroDeEscrita } from "@/local-db/writes";
-import { dataDoNovoDia } from "@/lib/days";
-import { rotuloDia } from "@/lib/format";
+import { getLocalDb, type SaleDay } from "@/local-db";
+import { createDay, WriteError } from "@/local-db/writes";
+import { newDayDate } from "@/lib/days";
+import { shortDate } from "@/lib/format";
 
-export function FormularioNovoDia({
-  dias,
-  hoje,
-  aoCancelar,
-  aoEscolherDia,
+export function NewDayForm({
+  days,
+  today,
+  onCancel,
+  onSelectDay,
 }: {
-  dias: DiaDeVenda[];
-  hoje: string;
-  aoCancelar: () => void;
-  aoEscolherDia: (diaId: string) => void;
+  days: SaleDay[];
+  today: string;
+  onCancel: () => void;
+  onSelectDay: (dayId: string) => void;
 }) {
   const id = useId();
-  const [data, setData] = useState(() => dataDoNovoDia(dias, hoje));
-  const [nome, setNome] = useState("");
-  const [cardapio, setCardapio] = useState<"copiar" | "padrao">(dias.length > 0 ? "copiar" : "padrao");
-  const [origem, setOrigem] = useState(dias[0]?.id ?? "");
-  const [erro, setErro] = useState<string | null>(null);
-  const [criando, setCriando] = useState(false);
-  const repetido = dias.find((d) => d.data === data);
+  const [date, setDate] = useState(() => newDayDate(days, today));
+  const [name, setName] = useState("");
+  const [menu, setMenu] = useState<"copy" | "default">(days.length > 0 ? "copy" : "default");
+  const [origin, setOrigin] = useState(days[0]?.id ?? "");
+  const [error, setError] = useState<string | null>(null);
+  const [creating, setCreating] = useState(false);
+  const duplicate = days.find((d) => d.date === date);
 
-  async function criar(evento: FormEvent) {
-    evento.preventDefault();
-    if (!data || repetido) return;
-    setCriando(true);
-    setErro(null);
+  async function create(event: FormEvent) {
+    event.preventDefault();
+    if (!date || duplicate) return;
+    setCreating(true);
+    setError(null);
     try {
-      const diaId = await criarDia(getLocalDb(), {
-        data,
-        nome,
-        cardapio: cardapio === "copiar" ? { tipo: "copiar", diaId: origem } : { tipo: "padrao" },
+      const dayId = await createDay(getLocalDb(), {
+        date,
+        name,
+        menu: menu === "copy" ? { type: "copy", dayId: origin } : { type: "default" },
       });
-      aoEscolherDia(diaId);
+      onSelectDay(dayId);
     } catch (e) {
-      setErro(e instanceof ErroDeEscrita ? e.message : "Não foi possível criar o dia.");
-      setCriando(false);
+      setError(e instanceof WriteError ? e.message : "Não foi possível criar o dia.");
+      setCreating(false);
     }
   }
 
-  const botao = "h-11 flex-1 rounded-[10px] text-[13px] tablet:h-[34px] tablet:rounded-lg tablet:text-xs";
+  const buttonClass = "h-11 flex-1 rounded-[10px] text-[13px] tablet:h-[34px] tablet:rounded-lg tablet:text-xs";
 
   return (
-    <form onSubmit={criar} className="flex flex-col gap-3">
+    <form onSubmit={create} className="flex flex-col gap-3">
       <div className="flex flex-col gap-1">
-        <Label htmlFor={`${id}-data`}>Data</Label>
+        <Label htmlFor={`${id}-date`}>Data</Label>
         <Input
-          id={`${id}-data`}
+          id={`${id}-date`}
           type="date"
           required
-          value={data}
-          onChange={(e) => setData(e.target.value)}
-          aria-invalid={repetido ? true : undefined}
-          aria-describedby={repetido ? `${id}-repetido` : undefined}
+          value={date}
+          onChange={(e) => setDate(e.target.value)}
+          aria-invalid={duplicate ? true : undefined}
+          aria-describedby={duplicate ? `${id}-duplicate` : undefined}
         />
-        {repetido && (
-          <p id={`${id}-repetido`} className="text-[11px] text-warn">
-            Já existe um dia em {rotuloDia(repetido.data)}.{" "}
+        {duplicate && (
+          <p id={`${id}-duplicate`} className="text-[11px] text-warn">
+            Já existe um dia em {shortDate(duplicate.date)}.{" "}
             <button
               type="button"
-              onClick={() => aoEscolherDia(repetido.id)}
+              onClick={() => onSelectDay(duplicate.id)}
               className="font-semibold underline underline-offset-2"
             >
               Abrir esse dia
@@ -78,59 +78,59 @@ export function FormularioNovoDia({
       </div>
 
       <div className="flex flex-col gap-1">
-        <Label htmlFor={`${id}-nome`}>Nome (opcional)</Label>
+        <Label htmlFor={`${id}-name`}>Nome (opcional)</Label>
         <Input
-          id={`${id}-nome`}
+          id={`${id}-name`}
           placeholder="Ex.: Culto de jovens"
-          value={nome}
-          onChange={(e) => setNome(e.target.value)}
+          value={name}
+          onChange={(e) => setName(e.target.value)}
         />
       </div>
 
       <div className="flex flex-col gap-1">
-        <span id={`${id}-cardapio`} className="text-[11px] text-muted-foreground">
+        <span id={`${id}-menu`} className="text-[11px] text-muted-foreground">
           Cardápio
         </span>
         <ToggleGroup
           type="single"
-          aria-labelledby={`${id}-cardapio`}
-          value={cardapio}
-          onValueChange={(v) => v && setCardapio(v as typeof cardapio)}
+          aria-labelledby={`${id}-menu`}
+          value={menu}
+          onValueChange={(v) => v && setMenu(v as typeof menu)}
         >
-          <ToggleGroupItem value="copiar" disabled={dias.length === 0}>
+          <ToggleGroupItem value="copy" disabled={days.length === 0}>
             Copiar de outro dia
           </ToggleGroupItem>
-          <ToggleGroupItem value="padrao">Preço padrão</ToggleGroupItem>
+          <ToggleGroupItem value="default">Preço padrão</ToggleGroupItem>
         </ToggleGroup>
-        {cardapio === "copiar" && (
+        {menu === "copy" && (
           <select
             aria-label="Copiar de"
-            value={origem}
-            onChange={(e) => setOrigem(e.target.value)}
+            value={origin}
+            onChange={(e) => setOrigin(e.target.value)}
             className="h-[42px] rounded-[10px] border border-input bg-muted px-2.5 text-sm text-foreground outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring tablet:h-[34px] tablet:rounded-lg tablet:text-xs"
           >
-            {dias.map((d) => (
+            {days.map((d) => (
               <option key={d.id} value={d.id}>
-                {rotuloDia(d.data)}
-                {d.nome ? ` · ${d.nome}` : ""}
+                {shortDate(d.date)}
+                {d.name ? ` · ${d.name}` : ""}
               </option>
             ))}
           </select>
         )}
       </div>
 
-      {erro && (
+      {error && (
         <p role="alert" className="text-[11px] text-warn">
-          {erro}
+          {error}
         </p>
       )}
 
       <div className="flex gap-2 pt-1">
-        <Button type="button" variant="outline" onClick={aoCancelar} className={botao}>
+        <Button type="button" variant="outline" onClick={onCancel} className={buttonClass}>
           Cancelar
         </Button>
-        <Button type="submit" disabled={!data || !!repetido || criando} className={`${botao} font-semibold`}>
-          {data ? `Criar dia · ${rotuloDia(data)}` : "Criar dia"}
+        <Button type="submit" disabled={!date || !!duplicate || creating} className={`${buttonClass} font-semibold`}>
+          {date ? `Criar dia · ${shortDate(date)}` : "Criar dia"}
         </Button>
       </div>
     </form>

@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-// Fonte servida pelo próprio app (sem Google Fonts), para funcionar offline.
+// Font served by the app itself (no Google Fonts), so it works offline.
 import "@fontsource/poppins/400.css";
 import "@fontsource/poppins/500.css";
 import "@fontsource/poppins/600.css";

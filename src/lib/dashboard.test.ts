@@ -1,178 +1,178 @@
 import { describe, expect, it } from "vitest";
-import type { Cliente, DiaDeVenda, ItemPedido, Pagamento, Pedido, Produto } from "@/local-db";
-import { montarPainel, type DadosPainel } from "./dashboard";
+import type { Customer, SaleDay, OrderItem, Payment, Order, Product } from "@/local-db";
+import { buildDashboard, type DashboardData } from "./dashboard";
 
-const CANTINA = "c0000000-0000-4000-8000-000000000000";
-const sync = { atualizadoEm: "2026-11-01T00:00:00.000Z", seq: 1 };
-let contador = 0;
-const novoId = () => `00000000-0000-4000-8000-${String(++contador).padStart(12, "0")}`;
+const CANTEEN = "c0000000-0000-4000-8000-000000000000";
+const sync = { updatedAt: "2026-11-01T00:00:00.000Z", seq: 1 };
+let badgeCount = 0;
+const newId = () => `00000000-0000-4000-8000-${String(++badgeCount).padStart(12, "0")}`;
 
-/** Monta o banco local com os dados de exemplo do protótipo (design/telas/Painel.dc.html). */
-function exemplo() {
-  const dados: DadosPainel = { dias: [], pedidos: [], itens: [], pagamentos: [], produtos: [], clientes: [] };
-  const espeto: Produto = { id: novoId(), cantinaId: CANTINA, nome: "Espeto de carne", precoCentavos: 1200, ativo: true, ...sync };
-  dados.produtos.push(espeto);
+/** Builds the local database with the prototype's sample data (design/screens/Dashboard.dc.html). */
+function example() {
+  const data: DashboardData = { days: [], orders: [], items: [], payments: [], products: [], customers: [] };
+  const skewer: Product = { id: newId(), canteenId: CANTEEN, name: "Espeto de carne", priceCents: 1200, active: true, ...sync };
+  data.products.push(skewer);
 
-  const dia = (data: string): DiaDeVenda => {
-    const d: DiaDeVenda = { id: novoId(), cantinaId: CANTINA, data, nome: null, fechadoEm: null, canceladoEm: null, ...sync };
-    dados.dias.push(d);
+  const day = (date: string): SaleDay => {
+    const d: SaleDay = { id: newId(), canteenId: CANTEEN, date, name: null, closedAt: null, canceledAt: null, ...sync };
+    data.days.push(d);
     return d;
   };
-  const pedido = (
-    d: DiaDeVenda,
-    nome: string,
-    qtd: number,
-    preco: number,
-    opcoes: { pago?: boolean; reserva?: boolean } = {},
-  ): Pedido => {
-    const cliente: Cliente = { id: novoId(), cantinaId: CANTINA, nome, telefone: null, ...sync };
-    const p: Pedido = {
-      id: novoId(),
-      cantinaId: CANTINA,
-      diaId: d.id,
-      clienteId: cliente.id,
-      origem: "balcao",
-      status: opcoes.reserva ? "recebido" : "entregue",
-      vendedorId: null,
-      criadoEm: "2026-11-01T20:00:00.000Z",
-      entregueEm: null,
+  const order = (
+    d: SaleDay,
+    name: string,
+    qty: number,
+    price: number,
+    options: { paid?: boolean; reservation?: boolean } = {},
+  ): Order => {
+    const customer: Customer = { id: newId(), canteenId: CANTEEN, name, phone: null, ...sync };
+    const p: Order = {
+      id: newId(),
+      canteenId: CANTEEN,
+      dayId: d.id,
+      customerId: customer.id,
+      origin: "balcao",
+      status: options.reservation ? "recebido" : "entregue",
+      sellerId: null,
+      createdAt: "2026-11-01T20:00:00.000Z",
+      deliveredAt: null,
       ...sync,
     };
-    const item: ItemPedido = {
-      id: novoId(),
-      pedidoId: p.id,
-      cantinaId: CANTINA,
-      produtoId: espeto.id,
-      quantidade: qtd,
-      precoUnitarioCentavos: preco,
-      canceladoEm: null,
+    const item: OrderItem = {
+      id: newId(),
+      orderId: p.id,
+      canteenId: CANTEEN,
+      productId: skewer.id,
+      quantity: qty,
+      unitPriceCents: price,
+      canceledAt: null,
       ...sync,
     };
-    dados.clientes.push(cliente);
-    dados.pedidos.push(p);
-    dados.itens.push(item);
-    if (opcoes.pago) dados.pagamentos.push(pagamento(p, qtd * preco));
+    data.customers.push(customer);
+    data.orders.push(p);
+    data.items.push(item);
+    if (options.paid) data.payments.push(payment(p, qty * price));
     return p;
   };
-  const pagamento = (p: Pedido, valor: number): Pagamento => ({
-    id: novoId(),
-    pedidoId: p.id,
-    cantinaId: CANTINA,
-    valorCentavos: valor,
-    forma: "pix",
-    vendedorId: null,
-    registradoEm: "2026-11-01T20:00:00.000Z",
-    estornadoEm: null,
+  const payment = (p: Order, amount: number): Payment => ({
+    id: newId(),
+    orderId: p.id,
+    canteenId: CANTEEN,
+    amountCents: amount,
+    method: "pix",
+    sellerId: null,
+    recordedAt: "2026-11-01T20:00:00.000Z",
+    refundedAt: null,
     ...sync,
   });
 
-  const out18 = dia("2026-10-18");
-  const pagos18: [string, number][] = [
+  const oct18 = day("2026-10-18");
+  const paid18: [string, number][] = [
     ["Charlene", 5], ["Mariana", 1], ["Paulinha", 3], ["Elised", 2], ["Evelyn", 1],
     ["Tamires", 1], ["Renan e Tay", 2], ["Júnior", 1], ["José", 1],
   ];
-  for (const [nome, qtd] of pagos18) pedido(out18, nome, qtd, 1000, { pago: true });
-  pedido(out18, "Melina", 3, 1000);
-  pedido(out18, "Aniello", 1, 1000);
-  pedido(out18, "Maju", 1, 1000);
+  for (const [name, qty] of paid18) order(oct18, name, qty, 1000, { paid: true });
+  order(oct18, "Melina", 3, 1000);
+  order(oct18, "Aniello", 1, 1000);
+  order(oct18, "Maju", 1, 1000);
 
-  const nov01 = dia("2026-11-01");
-  for (const [nome, qtd] of [["Elizete", 2], ["Fernando", 2], ["Angélica", 1], ["Lorrayne", 1]] as const) {
-    pedido(nov01, nome, qtd, 1200);
+  const nov01 = day("2026-11-01");
+  for (const [name, qty] of [["Elizete", 2], ["Fernando", 2], ["Angélica", 1], ["Lorrayne", 1]] as const) {
+    order(nov01, name, qty, 1200);
   }
 
-  const nov15 = dia("2026-11-15");
-  pedido(nov15, "Gustavo", 3, 1200, { reserva: true });
+  const nov15 = day("2026-11-15");
+  order(nov15, "Gustavo", 3, 1200, { reservation: true });
 
-  return { dados, out18, nov01, nov15, pedido, pagamento };
+  return { data, oct18, nov01, nov15, order, payment };
 }
 
-// No protótipo, os pendentes de 18 out estão "há 17 dias".
-const HOJE = "2026-11-04";
+// In the prototype, the pending orders from 18 out are "há 17 dias".
+const TODAY = "2026-11-04";
 
-describe("montarPainel", () => {
-  it("soma todos os dias como no protótipo", () => {
-    const { dados, nov15 } = exemplo();
-    const painel = montarPainel(dados, "todos", HOJE);
+describe("buildDashboard", () => {
+  it("sums all days as in the prototype", () => {
+    const { data, nov15 } = example();
+    const dashboard = buildDashboard(data, "all", TODAY);
 
-    expect(painel.numeros).toEqual({
-      vendido: 29200,
-      recebido: 17000,
-      pendente: 12200,
-      pctRecebido: 58,
-      pessoasPendentes: 7,
-      itens: 28,
-      vendas: 16,
-      reservas: 1,
-      valorReservas: 3600,
+    expect(dashboard.stats).toEqual({
+      sold: 29200,
+      received: 17000,
+      pending: 12200,
+      receivedPct: 58,
+      pendingPeople: 7,
+      items: 28,
+      sales: 16,
+      reservations: 1,
+      reservationsAmount: 3600,
     });
-    expect(painel.proximo?.id).toBe(nov15.id);
-    expect(painel.reservasDoProximo).toBe(1);
-    expect(painel.dias.map((d) => d.data)).toEqual(["2026-11-15", "2026-11-01", "2026-10-18"]);
-    expect(painel.porDia.map((d) => d.pctRecebido)).toEqual([0, 0, 77]);
+    expect(dashboard.upcoming?.id).toBe(nov15.id);
+    expect(dashboard.upcomingReservations).toBe(1);
+    expect(dashboard.days.map((d) => d.date)).toEqual(["2026-11-15", "2026-11-01", "2026-10-18"]);
+    expect(dashboard.byDay.map((d) => d.receivedPct)).toEqual([0, 0, 77]);
   });
 
-  it("ordena os pendentes do mais antigo para o mais novo, e o maior valor primeiro", () => {
-    const { dados } = exemplo();
-    const { pendentes, reservas } = montarPainel(dados, "todos", HOJE);
+  it("sorts pending orders oldest first, and the largest amount first", () => {
+    const { data } = example();
+    const { pending, reservations } = buildDashboard(data, "all", TODAY);
 
-    expect(pendentes.slice(0, 3).map((p) => [p.nome, p.idadeDias, p.aberto])).toEqual([
+    expect(pending.slice(0, 3).map((p) => [p.name, p.ageDays, p.due])).toEqual([
       ["Melina", 17, 3000],
       ["Aniello", 17, 1000],
       ["Maju", 17, 1000],
     ]);
-    expect(pendentes[0].descricao).toBe("3× Espeto de carne");
-    expect(reservas.map((r) => [r.nome, r.valor, r.data])).toEqual([["Gustavo", 3600, "2026-11-15"]]);
+    expect(pending[0].description).toBe("3× Espeto de carne");
+    expect(reservations.map((r) => [r.name, r.amount, r.date])).toEqual([["Gustavo", 3600, "2026-11-15"]]);
   });
 
-  it("filtra por um dia", () => {
-    const { dados, out18 } = exemplo();
-    const { numeros, reservas } = montarPainel(dados, out18.id, HOJE);
+  it("filters by one day", () => {
+    const { data, oct18 } = example();
+    const { stats, reservations } = buildDashboard(data, oct18.id, TODAY);
 
-    expect(numeros.vendido).toBe(22000);
-    expect(numeros.recebido).toBe(17000);
-    expect(numeros.pctRecebido).toBe(77);
-    expect(numeros.pessoasPendentes).toBe(3);
-    expect(numeros.reservas).toBe(0);
-    expect(reservas).toEqual([]);
+    expect(stats.sold).toBe(22000);
+    expect(stats.received).toBe(17000);
+    expect(stats.receivedPct).toBe(77);
+    expect(stats.pendingPeople).toBe(3);
+    expect(stats.reservations).toBe(0);
+    expect(reservations).toEqual([]);
   });
 
-  it("ignora pedido cancelado, pagamento estornado e dia removido", () => {
-    const { dados, nov01, pedido, pagamento } = exemplo();
-    pedido(nov01, "Cancelado", 5, 1200).status = "cancelado";
-    const estornado = pagamento(dados.pedidos.find((p) => p.diaId === nov01.id)!, 2400);
-    estornado.estornadoEm = "2026-11-02T00:00:00.000Z";
-    dados.pagamentos.push(estornado);
+  it("ignores canceled orders, refunded payments and removed days", () => {
+    const { data, nov01, order, payment } = example();
+    order(nov01, "Cancelado", 5, 1200).status = "cancelado";
+    const refunded = payment(data.orders.find((p) => p.dayId === nov01.id)!, 2400);
+    refunded.refundedAt = "2026-11-02T00:00:00.000Z";
+    data.payments.push(refunded);
 
-    const diaRemovido = { ...nov01, id: novoId(), data: "2026-11-08", canceladoEm: "2026-11-02T00:00:00.000Z" };
-    dados.dias.push(diaRemovido);
-    pedido(diaRemovido, "Fantasma", 1, 1200);
+    const removedDay = { ...nov01, id: newId(), date: "2026-11-08", canceledAt: "2026-11-02T00:00:00.000Z" };
+    data.days.push(removedDay);
+    order(removedDay, "Fantasma", 1, 1200);
 
-    const { numeros, dias } = montarPainel(dados, "todos", HOJE);
-    expect(numeros.vendido).toBe(29200);
-    expect(numeros.recebido).toBe(17000);
-    expect(dias.map((d) => d.data)).not.toContain("2026-11-08");
+    const { stats, days } = buildDashboard(data, "all", TODAY);
+    expect(stats.sold).toBe(29200);
+    expect(stats.received).toBe(17000);
+    expect(days.map((d) => d.date)).not.toContain("2026-11-08");
   });
 
-  it("conta pagamento parcial e não deixa o recebido passar do valor vendido", () => {
-    const { dados, nov01, pedido, pagamento } = exemplo();
-    const parcial = pedido(nov01, "Parcial", 2, 1200);
-    dados.pagamentos.push(pagamento(parcial, 1000));
-    const aMais = pedido(nov01, "A mais", 1, 1200);
-    dados.pagamentos.push(pagamento(aMais, 5000));
+  it("counts partial payments and does not let received exceed the sold amount", () => {
+    const { data, nov01, order, payment } = example();
+    const partial = order(nov01, "Parcial", 2, 1200);
+    data.payments.push(payment(partial, 1000));
+    const extra = order(nov01, "A mais", 1, 1200);
+    data.payments.push(payment(extra, 5000));
 
-    const { numeros, pendentes } = montarPainel(dados, nov01.id, HOJE);
-    expect(numeros.vendido).toBe(7200 + 2400 + 1200);
-    expect(numeros.recebido).toBe(1000 + 1200);
-    expect(pendentes.find((p) => p.nome === "Parcial")?.aberto).toBe(1400);
-    expect(pendentes.find((p) => p.nome === "A mais")).toBeUndefined();
+    const { stats, pending } = buildDashboard(data, nov01.id, TODAY);
+    expect(stats.sold).toBe(7200 + 2400 + 1200);
+    expect(stats.received).toBe(1000 + 1200);
+    expect(pending.find((p) => p.name === "Parcial")?.due).toBe(1400);
+    expect(pending.find((p) => p.name === "A mais")).toBeUndefined();
   });
 
-  it("funciona sem nenhum dado", () => {
-    const vazio: DadosPainel = { dias: [], pedidos: [], itens: [], pagamentos: [], produtos: [], clientes: [] };
-    const painel = montarPainel(vazio, "todos", HOJE);
-    expect(painel.proximo).toBeNull();
-    expect(painel.numeros.pctRecebido).toBe(0);
-    expect(painel.porDia).toEqual([]);
+  it("works with no data", () => {
+    const emptyMessage: DashboardData = { days: [], orders: [], items: [], payments: [], products: [], customers: [] };
+    const dashboard = buildDashboard(emptyMessage, "all", TODAY);
+    expect(dashboard.upcoming).toBeNull();
+    expect(dashboard.stats.receivedPct).toBe(0);
+    expect(dashboard.byDay).toEqual([]);
   });
 });

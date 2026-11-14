@@ -5,48 +5,48 @@ import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { plural } from "@/lib/format";
-import type { FiltroStatus, TelaVendas } from "@/lib/sales";
-import { ListaDePedidos } from "./order-list";
-import { QuadroDePedidos } from "./order-board";
+import type { StatusFilter, SalesScreen } from "@/lib/sales";
+import { OrderList } from "./order-list";
+import { OrderBoard } from "./order-board";
 
-const FILTROS: [FiltroStatus, string][] = [
-  ["todos", "Todos"],
-  ["reservado", "Reservas"],
-  ["pendente", "Pendentes"],
-  ["pago", "Pagos"],
+const FILTERS: [StatusFilter, string][] = [
+  ["all", "Todos"],
+  ["reserved", "Reservas"],
+  ["pending", "Pendentes"],
+  ["paid", "Pagos"],
 ];
 
-export function PedidosDoDia({
-  tela,
-  busca,
-  aoBuscar,
-  filtro,
-  aoFiltrar,
+export function DayOrders({
+  screen,
+  search,
+  onSearch,
+  filter,
+  onFilter,
 }: {
-  tela: TelaVendas;
-  busca: string;
-  aoBuscar: (busca: string) => void;
-  filtro: FiltroStatus;
-  aoFiltrar: (filtro: FiltroStatus) => void;
+  screen: SalesScreen;
+  search: string;
+  onSearch: (search: string) => void;
+  filter: StatusFilter;
+  onFilter: (filter: StatusFilter) => void;
 }) {
-  const [visao, setVisao] = useState<"lista" | "quadro">("lista");
-  const lista = visao === "lista";
-  const contagem = lista ? tela.pedidos.length : tela.quadro.reduce((soma, c) => soma + c.pedidos.length, 0);
+  const [view, setView] = useState<"list" | "board">("list");
+  const list = view === "list";
+  const count = list ? screen.orders.length : screen.board.reduce((sum, c) => sum + c.orders.length, 0);
 
-  const vazio = busca.trim()
+  const emptyMessage = search.trim()
     ? "Ninguém com esse nome neste dia."
-    : tela.totalDoDia === 0
+    : screen.dayTotal === 0
       ? "Nada por aqui ainda. Registre a primeira venda ou reserva."
       : "Nenhum pedido com esse status.";
 
   return (
-    <section aria-labelledby="pedidos-do-dia" className="flex flex-col gap-3">
+    <section aria-labelledby="day-orders" className="flex flex-col gap-3">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-baseline gap-2.5">
-          <h2 id="pedidos-do-dia" className="text-sm font-semibold">
+          <h2 id="day-orders" className="text-sm font-semibold">
             Pedidos do dia
           </h2>
-          <span className="text-[11px] text-muted-foreground">{plural(contagem, "pedido", "pedidos")}</span>
+          <span className="text-[11px] text-muted-foreground">{plural(count, "pedido", "pedidos")}</span>
         </div>
 
         <div className="flex w-full flex-wrap items-center gap-2 tablet:w-auto">
@@ -59,35 +59,35 @@ export function PedidosDoDia({
               type="search"
               aria-label="Buscar cliente"
               placeholder="Buscar cliente"
-              value={busca}
-              onChange={(e) => aoBuscar(e.target.value)}
+              value={search}
+              onChange={(e) => onSearch(e.target.value)}
               className="bg-background pl-8 tablet:h-9"
             />
           </div>
-          {lista && (
-            <Tabs value={filtro} onValueChange={(v) => aoFiltrar(v as FiltroStatus)}>
+          {list && (
+            <Tabs value={filter} onValueChange={(v) => onFilter(v as StatusFilter)}>
               <TabsList aria-label="Status">
-                {FILTROS.map(([valor, rotulo]) => (
-                  <TabsTrigger key={valor} value={valor}>
-                    {rotulo}
+                {FILTERS.map(([value, label]) => (
+                  <TabsTrigger key={value} value={value}>
+                    {label}
                   </TabsTrigger>
                 ))}
               </TabsList>
             </Tabs>
           )}
-          <Tabs value={visao} onValueChange={(v) => setVisao(v as typeof visao)} className="hidden tablet:block">
+          <Tabs value={view} onValueChange={(v) => setView(v as typeof view)} className="hidden tablet:block">
             <TabsList aria-label="Visualização">
-              <TabsTrigger value="lista">Lista</TabsTrigger>
-              <TabsTrigger value="quadro">Quadro</TabsTrigger>
+              <TabsTrigger value="list">Lista</TabsTrigger>
+              <TabsTrigger value="board">Quadro</TabsTrigger>
             </TabsList>
           </Tabs>
         </div>
       </div>
 
-      {lista ? (
-        <ListaDePedidos key={`${filtro}|${busca}`} pedidos={tela.pedidos} vazio={vazio} />
+      {list ? (
+        <OrderList key={`${filter}|${search}`} orders={screen.orders} emptyMessage={emptyMessage} />
       ) : (
-        <QuadroDePedidos colunas={tela.quadro} />
+        <OrderBoard columns={screen.board} />
       )}
     </section>
   );

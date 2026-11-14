@@ -1,40 +1,40 @@
 import { expect, test, type Page } from "@playwright/test";
 import { uuidV5 } from "../src/lib/uuid-v5";
-import { data, gravarNoBancoLocal, id, lerTabela, linha } from "./local-db";
+import { date, writeLocalDb, id, readTable, row } from "./local-db";
 
-// page.route não enxerga pedidos que passam pelo service worker.
+// page.route does not see requests that go through the service worker.
 test.use({ serviceWorkers: "block" });
 
-const linhaDo = (page: Page, nome: string) => page.getByRole("listitem").filter({ hasText: nome });
+const linhaDo = (page: Page, name: string) => page.getByRole("listitem").filter({ hasText: name });
 
-async function soComACantina(page: Page) {
-  await page.route("**/api/cantina", (rota) => rota.fulfill({ status: 500, json: { erro: "fora do ar" } }));
-  await page.goto("/cardapio");
+async function onlyCanteen(page: Page) {
+  await page.route("**/api/canteen", (route) => route.fulfill({ status: 500, json: { error: "server down" } }));
+  await page.goto("/menu");
   await expect(page.getByText("Nenhum item no cardápio ainda")).toBeVisible();
-  await gravarNoBancoLocal(page, { cantinas: [linha.cantina()] });
+  await writeLocalDb(page, { canteens: [row.canteen()] });
   await page.reload();
 }
 
-async function adicionarItem(page: Page, nome: string, preco: string) {
+async function addItem(page: Page, name: string, price: string) {
   const form = page.getByRole("form", { name: "Novo item" });
-  await form.getByLabel("Nome do item").fill(nome);
-  await form.getByLabel("Preço padrão").fill(preco);
+  await form.getByLabel("Nome do item").fill(name);
+  await form.getByLabel("Preço padrão").fill(price);
   await form.getByRole("button", { name: "Salvar item" }).click();
-  await expect(form.getByRole("status")).toHaveText(`${nome} entrou no cardápio. Adicione o próximo ou feche.`);
+  await expect(form.getByRole("status")).toHaveText(`${name} entrou no cardápio. Adicione o próximo ou feche.`);
 }
 
-test("primeiro uso: itens antes do dia, quantidade no dia e venda até esgotar", async ({ page }) => {
-  await soComACantina(page);
+test("first use: items before the day, quantity on the day and selling until sold out", async ({ page }) => {
+  await onlyCanteen(page);
 
   await expect(page.getByText("Nenhum dia de venda ainda")).toHaveCount(0);
   await page.getByRole("button", { name: "Adicionar item" }).last().click();
-  await adicionarItem(page, "Espeto de carne", "12");
+  await addItem(page, "Espeto de carne", "12");
   await expect(page.getByLabel("Nome do item")).toBeFocused();
   await expect(page.getByLabel("Nome do item")).toHaveValue("");
-  await adicionarItem(page, "Refrigerante", "6");
+  await addItem(page, "Refrigerante", "6");
 
-  const cadastrados = page.getByRole("list", { name: "Itens cadastrados" });
-  await expect(cadastrados.getByRole("listitem")).toHaveText([/Espeto de carne/, /Refrigerante/]);
+  const registered = page.getByRole("list", { name: "Itens cadastrados" });
+  await expect(registered.getByRole("listitem")).toHaveText([/Espeto de carne/, /Refrigerante/]);
   await page.getByRole("button", { name: "Fechar" }).click();
   await expect(page.getByRole("form", { name: "Novo item" })).toHaveCount(0);
 
@@ -43,12 +43,12 @@ test("primeiro uso: itens antes do dia, quantidade no dia e venda até esgotar",
   await page.getByRole("button", { name: /^Criar dia · / }).click();
   await expect(page.getByText("2 de 2 itens à venda")).toBeVisible();
 
-  const espeto = linhaDo(page, "Espeto de carne");
-  await expect(espeto.getByText("Sem limite")).toBeVisible();
-  await espeto.getByRole("button", { name: "Mudar a quantidade de Espeto de carne neste dia" }).click();
-  await espeto.getByRole("textbox", { name: "Quantidade neste dia" }).fill("2");
-  await espeto.getByRole("textbox", { name: "Quantidade neste dia" }).press("Enter");
-  await expect(espeto.getByText("· restam 2")).toBeVisible();
+  const skewer = linhaDo(page, "Espeto de carne");
+  await expect(skewer.getByText("Sem limite")).toBeVisible();
+  await skewer.getByRole("button", { name: "Mudar a quantidade de Espeto de carne neste dia" }).click();
+  await skewer.getByRole("textbox", { name: "Quantidade neste dia" }).fill("2");
+  await skewer.getByRole("textbox", { name: "Quantidade neste dia" }).press("Enter");
+  await expect(skewer.getByText("· restam 2")).toBeVisible();
   await expect(linhaDo(page, "Refrigerante").getByText("Sem limite")).toBeVisible();
 
   await page.getByRole("link", { name: "Vendas" }).first().click();
@@ -60,55 +60,55 @@ test("primeiro uso: itens antes do dia, quantidade no dia e venda até esgotar",
   await form.getByRole("radio", { name: "Pix" }).click();
   await form.getByRole("button", { name: "Registrar · R$ 24" }).click();
 
-  const esgotado = form.getByRole("option", { name: "Espeto de carne · R$ 12 · esgotado" });
-  await expect(esgotado).toBeDisabled();
+  const soldOut = form.getByRole("option", { name: "Espeto de carne · R$ 12 · esgotado" });
+  await expect(soldOut).toBeDisabled();
   await form.getByRole("radio", { name: "Pix" }).click();
   await form.getByRole("button", { name: "Registrar · R$ 12" }).click();
   await expect(form.getByRole("alert")).toHaveText("Espeto de carne esgotou.");
-  expect((await lerTabela(page, "pedidos")).length).toBe(1);
+  expect((await readTable(page, "orders")).length).toBe(1);
 
   await page.getByRole("link", { name: "Cardápio" }).first().click();
   await expect(linhaDo(page, "Espeto de carne").getByText("Esgotado")).toBeVisible();
 });
 
-test.describe("no celular", () => {
+test.describe("on the phone", () => {
   test.use({ viewport: { width: 390, height: 844 } });
 
-  test("define a quantidade do dia no cartão, Esc cancela e vazio volta a sem limite", async ({ page }) => {
-    await soComACantina(page);
-    const dia = id(10);
-    const espetoId = id(1);
-    await gravarNoBancoLocal(page, {
-      produtos: [linha.produto(1, "Espeto de carne", 1200)],
-      diasDeVenda: [linha.dia(10, data(0))],
-      precosDoDia: [{ ...linha.precoDoDia(0, dia, espetoId, 1200), id: await uuidV5(espetoId, dia) }],
-      pedidos: [linha.pedido(30, dia, null, "recebido")],
-      itensPedido: [linha.item(40, id(30), espetoId, 3, 1200)],
+  test("sets the day quantity on the card, Esc cancels and empty goes back to no limit", async ({ page }) => {
+    await onlyCanteen(page);
+    const day = id(10);
+    const skewerId = id(1);
+    await writeLocalDb(page, {
+      products: [row.product(1, "Espeto de carne", 1200)],
+      saleDays: [row.day(10, date(0))],
+      dayMenuItems: [{ ...row.dayMenuItem(0, day, skewerId, 1200), id: await uuidV5(skewerId, day) }],
+      orders: [row.order(30, day, null, "recebido")],
+      orderItems: [row.item(40, id(30), skewerId, 3, 1200)],
     });
     await page.reload();
 
-    const espeto = linhaDo(page, "Espeto de carne");
-    const mudar = espeto.getByRole("button", { name: "Mudar a quantidade de Espeto de carne neste dia" });
-    const campo = espeto.getByRole("textbox", { name: "Quantidade neste dia" });
+    const skewer = linhaDo(page, "Espeto de carne");
+    const changeButton = skewer.getByRole("button", { name: "Mudar a quantidade de Espeto de carne neste dia" });
+    const field = skewer.getByRole("textbox", { name: "Quantidade neste dia" });
 
-    await mudar.click();
-    await campo.fill("9");
-    await campo.press("Escape");
-    await expect(espeto.getByText("Sem limite")).toBeVisible();
+    await changeButton.click();
+    await field.fill("9");
+    await field.press("Escape");
+    await expect(skewer.getByText("Sem limite")).toBeVisible();
 
-    await mudar.click();
-    await campo.fill("-1");
-    await espeto.getByRole("button", { name: "Salvar" }).click();
-    await expect(espeto.getByRole("alert")).toContainText("Quantidade inválida");
+    await changeButton.click();
+    await field.fill("-1");
+    await skewer.getByRole("button", { name: "Salvar" }).click();
+    await expect(skewer.getByRole("alert")).toContainText("Quantidade inválida");
 
-    await campo.fill("50");
-    await espeto.getByRole("button", { name: "Salvar" }).click();
-    await expect(espeto.getByText("50", { exact: true })).toBeVisible();
-    await expect(espeto.getByText("· restam 47")).toBeVisible();
+    await field.fill("50");
+    await skewer.getByRole("button", { name: "Salvar" }).click();
+    await expect(skewer.getByText("50", { exact: true })).toBeVisible();
+    await expect(skewer.getByText("· restam 47")).toBeVisible();
 
-    await mudar.click();
-    await campo.fill("");
-    await campo.press("Enter");
-    await expect(espeto.getByText("Sem limite")).toBeVisible();
+    await changeButton.click();
+    await field.fill("");
+    await field.press("Enter");
+    await expect(skewer.getByText("Sem limite")).toBeVisible();
   });
 });

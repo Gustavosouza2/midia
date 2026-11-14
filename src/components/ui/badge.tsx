@@ -3,8 +3,8 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "cn";
 import { Slot } from "radix-ui";
 
-// Selos do DESIGN.md: Pago (ok), Pendente (warn), Reservado (outline). `contador` é o
-// selo pequeno do menu e do "em breve".
+// DESIGN.md badges: Pago (ok), Pendente (warn), Reservado (outline). `counter` is the
+// small badge of the menu and of "em breve".
 const badgeVariants = cva(
   "inline-flex w-fit shrink-0 items-center justify-center gap-1 overflow-hidden border border-transparent whitespace-nowrap [&>svg]:pointer-events-none [&>svg]:size-3",
   {
@@ -18,7 +18,7 @@ const badgeVariants = cva(
       },
       size: {
         default: "h-[22px] rounded-full px-2 text-[11px] font-medium",
-        contador: "rounded-[5px] px-1.5 text-[10px]",
+        counter: "rounded-[5px] px-1.5 text-[10px]",
       },
     },
     defaultVariants: {

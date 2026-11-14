@@ -1,24 +1,24 @@
-import { plural, rotuloDia } from "@/lib/format";
-import type { ResumoPedido } from "@/lib/dashboard";
+import { plural, shortDate } from "@/lib/format";
+import type { OrderSummary } from "@/lib/dashboard";
 import { ArrowRight } from "lucide-react";
 import Link from "next/link";
 import { Card, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Grupo } from "./group";
-import { Idade } from "./age";
-import { LinhaDePedido } from "./order-row";
+import { Group } from "./group";
+import { Age } from "./age";
+import { OrderRow } from "./order-row";
 
-/** Quantos pendentes o Painel mostra; o resto fica na tela Pendentes. */
-const PENDENTES_VISIVEIS = 3;
+/** How many pending orders the Dashboard shows; the rest stay on the Pending screen. */
+const VISIBLE_PENDING = 3;
 
-export function PrecisaDeAtencao({
-  reservas,
-  pendentes,
-  pessoasPendentes,
+export function NeedsAttention({
+  reservations,
+  pending,
+  pendingPeople,
 }: {
-  reservas: ResumoPedido[];
-  /** Do mais antigo para o mais novo. */
-  pendentes: ResumoPedido[];
-  pessoasPendentes: number;
+  reservations: OrderSummary[];
+  /** Oldest first. */
+  pending: OrderSummary[];
+  pendingPeople: number;
 }) {
   return (
     <Card>
@@ -26,45 +26,45 @@ export function PrecisaDeAtencao({
         <CardTitle>Precisa de atenção</CardTitle>
         <CardDescription className="hidden tablet:block">Reservas a entregar e pendentes antigos</CardDescription>
       </CardHeader>
-      {reservas.length > 0 && (
+      {reservations.length > 0 && (
         <>
-          <Grupo cor="bg-text-2" titulo="Reservas para entregar" contagem={String(reservas.length)} />
-          {reservas.map((r) => (
-            <LinhaDePedido
+          <Group color="bg-text-2" title="Reservas para entregar" count={String(reservations.length)} />
+          {reservations.map((r) => (
+            <OrderRow
               key={r.id}
-              pedido={r}
-              meta={r.descricao}
-              valor={r.valor}
-              detalhe={<span className="text-[11px] text-muted-foreground">para {rotuloDia(r.data)}</span>}
+              order={r}
+              meta={r.description}
+              amount={r.amount}
+              detail={<span className="text-[11px] text-muted-foreground">para {shortDate(r.date)}</span>}
               avatar="bg-accent"
             />
           ))}
         </>
       )}
 
-      <Grupo cor="bg-warn" titulo="Pendentes há mais tempo" contagem={plural(pessoasPendentes, "pessoa", "pessoas")} />
-      {pendentes.length === 0 ? (
+      <Group color="bg-warn" title="Pendentes há mais tempo" count={plural(pendingPeople, "pessoa", "pessoas")} />
+      {pending.length === 0 ? (
         <p className="border-t border-border px-3.5 py-4 text-[11px] text-muted-foreground tablet:px-5">
           Ninguém devendo neste período.
         </p>
       ) : (
         <>
-          {pendentes.slice(0, PENDENTES_VISIVEIS).map((p) => (
-            <LinhaDePedido
+          {pending.slice(0, VISIBLE_PENDING).map((p) => (
+            <OrderRow
               key={p.id}
-              pedido={p}
-              meta={`${p.descricao} · ${rotuloDia(p.data)}`}
-              valor={p.aberto}
-              detalhe={<Idade dias={p.idadeDias} />}
+              order={p}
+              meta={`${p.description} · ${shortDate(p.date)}`}
+              amount={p.due}
+              detail={<Age days={p.ageDays} />}
               avatar="border border-border bg-muted"
             />
           ))}
           <CardFooter className="p-0 tablet:p-0">
-            <Link transitionTypes={["tela"]}
-              href="/pendentes"
+            <Link transitionTypes={["screen"]}
+              href="/pending"
               className="flex w-full items-center justify-between px-3.5 py-3 text-xs text-text-2 hover:bg-accent tablet:px-5"
             >
-              Ver todos os pendentes ({pendentes.length})
+              Ver todos os pendentes ({pending.length})
               <ArrowRight className="size-3.5" />
             </Link>
           </CardFooter>

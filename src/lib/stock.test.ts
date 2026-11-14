@@ -1,96 +1,96 @@
 import { describe, expect, it } from "vitest";
-import type { ItemPedido, Pedido, PrecoDoDia } from "@/local-db";
-import { estoqueDoDia } from "./stock";
+import type { OrderItem, Order, DayMenuItem } from "@/local-db";
+import { dayStock } from "./stock";
 
-const CANTINA = "c0000000-0000-4000-8000-000000000000";
-const DIA = "d1";
-const OUTRO_DIA = "d2";
-const sync = { atualizadoEm: "2026-11-01T00:00:00.000Z", seq: 1 };
+const CANTEEN = "c0000000-0000-4000-8000-000000000000";
+const DAY = "d1";
+const OTHER_DAY = "d2";
+const sync = { updatedAt: "2026-11-01T00:00:00.000Z", seq: 1 };
 
-const preco = (diaId: string, produtoId: string, quantidade: number | null): PrecoDoDia => ({
-  id: `${diaId}-${produtoId}`,
-  cantinaId: CANTINA,
-  diaId,
-  produtoId,
-  precoCentavos: 1200,
-  ativo: true,
-  quantidade,
+const price = (dayId: string, productId: string, quantity: number | null): DayMenuItem => ({
+  id: `${dayId}-${productId}`,
+  canteenId: CANTEEN,
+  dayId,
+  productId,
+  priceCents: 1200,
+  active: true,
+  quantity,
   ...sync,
 });
 
-const pedido = (id: string, diaId: string, status: Pedido["status"]): Pedido => ({
+const order = (id: string, dayId: string, status: Order["status"]): Order => ({
   id,
-  cantinaId: CANTINA,
-  diaId,
-  clienteId: null,
-  origem: "balcao",
+  canteenId: CANTEEN,
+  dayId,
+  customerId: null,
+  origin: "balcao",
   status,
-  vendedorId: null,
-  criadoEm: "2026-11-01T20:00:00.000Z",
-  entregueEm: null,
+  sellerId: null,
+  createdAt: "2026-11-01T20:00:00.000Z",
+  deliveredAt: null,
   ...sync,
 });
 
-const item = (pedidoId: string, produtoId: string, quantidade: number, canceladoEm: string | null = null): ItemPedido => ({
-  id: `${pedidoId}-${produtoId}-${quantidade}`,
-  pedidoId,
-  cantinaId: CANTINA,
-  produtoId,
-  quantidade,
-  precoUnitarioCentavos: 1200,
-  canceladoEm,
+const item = (orderId: string, productId: string, quantity: number, canceledAt: string | null = null): OrderItem => ({
+  id: `${orderId}-${productId}-${quantity}`,
+  orderId,
+  canteenId: CANTEEN,
+  productId,
+  quantity,
+  unitPriceCents: 1200,
+  canceledAt,
   ...sync,
 });
 
-describe("estoqueDoDia", () => {
-  it("desconta vendas e reservas do dia, sem pedidos nem itens cancelados", () => {
-    const estoque = estoqueDoDia(
+describe("dayStock", () => {
+  it("deducts the day's sales and reservations, without canceled orders or items", () => {
+    const stock = dayStock(
       {
-        precosDoDia: [preco(DIA, "espeto", 10)],
-        pedidos: [
-          pedido("venda", DIA, "entregue"),
-          pedido("reserva", DIA, "recebido"),
-          pedido("cancelado", DIA, "cancelado"),
-          pedido("outro", OUTRO_DIA, "entregue"),
+        dayMenuItems: [price(DAY, "espeto", 10)],
+        orders: [
+          order("sale", DAY, "entregue"),
+          order("reservation", DAY, "recebido"),
+          order("cancelado", DAY, "cancelado"),
+          order("outro", OTHER_DAY, "entregue"),
         ],
-        itens: [
-          item("venda", "espeto", 3),
-          item("reserva", "espeto", 2),
-          item("venda", "espeto", 4, "2026-11-01T21:00:00.000Z"),
+        items: [
+          item("sale", "espeto", 3),
+          item("reservation", "espeto", 2),
+          item("sale", "espeto", 4, "2026-11-01T21:00:00.000Z"),
           item("cancelado", "espeto", 5),
           item("outro", "espeto", 5),
         ],
       },
-      DIA,
+      DAY,
     );
-    expect(estoque("espeto")).toEqual({ quantidade: 10, vendidos: 5, restantes: 5, esgotado: false });
+    expect(stock("espeto")).toEqual({ quantity: 10, soldUnits: 5, remaining: 5, soldOut: false });
   });
 
-  it("sem quantidade no dia, não tem limite", () => {
-    const estoque = estoqueDoDia(
-      { precosDoDia: [preco(DIA, "espeto", null)], pedidos: [pedido("p", DIA, "entregue")], itens: [item("p", "espeto", 7)] },
-      DIA,
+  it("without a quantity on the day, there is no limit", () => {
+    const stock = dayStock(
+      { dayMenuItems: [price(DAY, "espeto", null)], orders: [order("p", DAY, "entregue")], items: [item("p", "espeto", 7)] },
+      DAY,
     );
-    expect(estoque("espeto")).toEqual({ quantidade: null, vendidos: 7, restantes: null, esgotado: false });
-    expect(estoque("sem-linha")).toEqual({ quantidade: null, vendidos: 0, restantes: null, esgotado: false });
+    expect(stock("espeto")).toEqual({ quantity: null, soldUnits: 7, remaining: null, soldOut: false });
+    expect(stock("sem-linha")).toEqual({ quantity: null, soldUnits: 0, remaining: null, soldOut: false });
   });
 
-  it("esgota em zero e não fica negativo se a quantidade baixar depois das vendas", () => {
-    const dados = { pedidos: [pedido("p", DIA, "entregue")], itens: [item("p", "espeto", 4)] };
-    expect(estoqueDoDia({ ...dados, precosDoDia: [preco(DIA, "espeto", 4)] }, DIA)("espeto")).toMatchObject({
-      restantes: 0,
-      esgotado: true,
+  it("sells out at zero and does not go negative if the quantity is lowered after the sales", () => {
+    const data = { orders: [order("p", DAY, "entregue")], items: [item("p", "espeto", 4)] };
+    expect(dayStock({ ...data, dayMenuItems: [price(DAY, "espeto", 4)] }, DAY)("espeto")).toMatchObject({
+      remaining: 0,
+      soldOut: true,
     });
-    expect(estoqueDoDia({ ...dados, precosDoDia: [preco(DIA, "espeto", 2)] }, DIA)("espeto")).toMatchObject({
-      restantes: 0,
-      esgotado: true,
+    expect(dayStock({ ...data, dayMenuItems: [price(DAY, "espeto", 2)] }, DAY)("espeto")).toMatchObject({
+      remaining: 0,
+      soldOut: true,
     });
   });
 
-  it("linha gravada antes da coluna existir (sem o campo) conta como sem limite", () => {
-    const antiga = { ...preco(DIA, "espeto", null) } as Partial<PrecoDoDia>;
-    delete antiga.quantidade;
-    const estoque = estoqueDoDia({ precosDoDia: [antiga as PrecoDoDia], pedidos: [], itens: [] }, DIA);
-    expect(estoque("espeto").quantidade).toBeNull();
+  it("a row saved before the column existed (without the field) counts as no limit", () => {
+    const old = { ...price(DAY, "espeto", null) } as Partial<DayMenuItem>;
+    delete old.quantity;
+    const stock = dayStock({ dayMenuItems: [old as DayMenuItem], orders: [], items: [] }, DAY);
+    expect(stock("espeto").quantity).toBeNull();
   });
 });

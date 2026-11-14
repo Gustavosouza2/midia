@@ -1,72 +1,72 @@
-import type { ItemPedido, Pedido, PrecoDoDia, Produto } from "@/local-db";
-import { estoqueDoDia, type Estoque } from "./stock";
+import type { OrderItem, Order, DayMenuItem, Product } from "@/local-db";
+import { dayStock, type Stock } from "./stock";
 
-/** Tudo o que o Cardápio lê do banco local. */
-export type DadosCardapio = {
-  produtos: Produto[];
-  precosDoDia: PrecoDoDia[];
-  pedidos: Pedido[];
-  itens: ItemPedido[];
+/** Everything the Menu reads from the local database. */
+export type MenuData = {
+  products: Product[];
+  dayMenuItems: DayMenuItem[];
+  orders: Order[];
+  items: OrderItem[];
 };
 
-export type ItemDoCardapio = {
-  produto: Produto;
-  /** Preço neste dia; sem linha em precos_do_dia, o preço padrão. */
-  precoCentavos: number;
-  diferenteDoPadrao: boolean;
-  aVenda: boolean;
-  /** Quantidade, vendidos (reservas incluídas) e o que resta neste dia. */
-  estoque: Estoque;
+export type MenuItem = {
+  product: Product;
+  /** Price on this day; with no row in precos_do_dia, the default price. */
+  priceCents: number;
+  differsFromDefault: boolean;
+  forSale: boolean;
+  /** Quantity, sold (reservations included) and what remains on this day. */
+  stock: Stock;
 };
 
-export type Cardapio = {
-  /** Itens ativos em ordem alfabética, para a linha não mudar de lugar ao ligar ou desligar o switch. */
-  itens: ItemDoCardapio[];
-  aVenda: number;
+export type Menu = {
+  /** Active items in alphabetical order, so a row does not move when the switch is turned on or off. */
+  items: MenuItem[];
+  forSale: number;
 };
 
-/** Monta a lista do Cardápio de um dia a partir das linhas do banco local. */
-export function montarCardapio(dados: DadosCardapio, diaId: string): Cardapio {
-  const precoPorProduto = new Map(dados.precosDoDia.filter((p) => p.diaId === diaId).map((p) => [p.produtoId, p]));
-  const estoque = estoqueDoDia(dados, diaId);
+/** Builds a day's Menu list from the local database rows. */
+export function buildMenu(data: MenuData, dayId: string): Menu {
+  const menuItemByProduct = new Map(data.dayMenuItems.filter((p) => p.dayId === dayId).map((p) => [p.productId, p]));
+  const stock = dayStock(data, dayId);
 
-  const itens = dados.produtos
-    .filter((p) => p.ativo)
-    .sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR", { sensitivity: "base" }))
-    .map((produto): ItemDoCardapio => {
-      const linha = precoPorProduto.get(produto.id);
-      const precoCentavos = linha?.precoCentavos ?? produto.precoCentavos;
+  const items = data.products
+    .filter((p) => p.active)
+    .sort((a, b) => a.name.localeCompare(b.name, "pt-BR", { sensitivity: "base" }))
+    .map((product): MenuItem => {
+      const row = menuItemByProduct.get(product.id);
+      const priceCents = row?.priceCents ?? product.priceCents;
       return {
-        produto,
-        precoCentavos,
-        diferenteDoPadrao: precoCentavos !== produto.precoCentavos,
-        aVenda: linha?.ativo ?? false,
-        estoque: estoque(produto.id),
+        product,
+        priceCents,
+        differsFromDefault: priceCents !== product.priceCents,
+        forSale: row?.active ?? false,
+        stock: stock(product.id),
       };
     });
 
-  return { itens, aVenda: itens.filter((i) => i.aVenda).length };
+  return { items, forSale: items.filter((i) => i.forSale).length };
 }
 
-/** "12", "12,5", "12,50" ou "R$ 12,50" → centavos. Nulo se não for um valor em reais maior que zero. */
-export function lerReais(texto: string): number | null {
-  const limpo = texto.trim().replace(/^R\$\s*/i, "");
-  const partes = /^(\d{1,6})(?:[.,](\d{1,2}))?$/.exec(limpo);
-  if (!partes) return null;
-  const centavos = Number(partes[1]) * 100 + Number((partes[2] ?? "").padEnd(2, "0"));
-  return centavos > 0 ? centavos : null;
+/** "12", "12,5", "12,50" or "R$ 12,50" → cents. Null if it is not an amount in reais above zero. */
+export function parseReais(text: string): number | null {
+  const clean = text.trim().replace(/^R\$\s*/i, "");
+  const parts = /^(\d{1,6})(?:[.,](\d{1,2}))?$/.exec(clean);
+  if (!parts) return null;
+  const cents = Number(parts[1]) * 100 + Number((parts[2] ?? "").padEnd(2, "0"));
+  return cents > 0 ? cents : null;
 }
 
-/** Centavos → texto do campo de preço: "12" ou "12,50". */
-export function reaisParaCampo(centavos: number): string {
-  const reais = Math.floor(centavos / 100);
-  const resto = centavos % 100;
-  return resto ? `${reais},${String(resto).padStart(2, "0")}` : String(reais);
+/** Cents → price input text: "12" or "12,50". */
+export function formatReaisInput(cents: number): string {
+  const reais = Math.floor(cents / 100);
+  const remainder = cents % 100;
+  return remainder ? `${reais},${String(remainder).padStart(2, "0")}` : String(reais);
 }
 
-/** Texto do campo Quantidade: "" (sem limite) ou "50". Inteiro ≥ 0; outra coisa = undefined (inválido). */
-export function lerQuantidade(texto: string): number | null | undefined {
-  const limpo = texto.trim();
-  if (!limpo) return null;
-  return /^\d{1,5}$/.test(limpo) ? Number(limpo) : undefined;
+/** Quantity input text: "" (no limit) or "50". Integer ≥ 0; anything else = undefined (invalid). */
+export function parseQuantity(text: string): number | null | undefined {
+  const clean = text.trim();
+  if (!clean) return null;
+  return /^\d{1,5}$/.test(clean) ? Number(clean) : undefined;
 }

@@ -12,38 +12,38 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { getLocalDb, type CantinaLocalDb, type DiaDeVenda } from "@/local-db";
-import { diaTemPedidos, ErroDeEscrita, removerDia } from "@/local-db/writes";
-import { useLeituraLocal } from "@/local-db/use-local-query";
-import { rotuloDia } from "@/lib/format";
+import { getLocalDb, type CanteenLocalDb, type SaleDay } from "@/local-db";
+import { dayHasOrders, WriteError, removeDay } from "@/local-db/writes";
+import { useLocalQuery } from "@/local-db/use-local-query";
+import { shortDate } from "@/lib/format";
 
 /**
- * Link discreto "Remover dia", só enquanto o dia não tem pedidos. Depois de remover, o dia
- * sai de diasAtivos() e a tela volta para diaInicial().
+ * Discreet "Remover dia" link, only while the day has no orders. After removal, the day
+ * leaves activeDays() and the screen goes back to initialDay().
  */
-export function RemoverDia({ dia }: { dia: DiaDeVenda }) {
-  const consulta = useCallback((db: CantinaLocalDb) => diaTemPedidos(db, dia.id), [dia.id]);
-  const temPedidos = useLeituraLocal(consulta);
-  const [aberto, setAberto] = useState(false);
-  const [erro, setErro] = useState<string | null>(null);
+export function RemoveDay({ day }: { day: SaleDay }) {
+  const query = useCallback((db: CanteenLocalDb) => dayHasOrders(db, day.id), [day.id]);
+  const hasOrders = useLocalQuery(query);
+  const [open, setOpen] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  if (temPedidos !== false) return null;
+  if (hasOrders !== false) return null;
 
-  async function remover() {
+  async function remove() {
     try {
-      await removerDia(getLocalDb(), dia.id);
-      setAberto(false);
+      await removeDay(getLocalDb(), day.id);
+      setOpen(false);
     } catch (e) {
-      setErro(e instanceof ErroDeEscrita ? e.message : "Não foi possível remover o dia.");
+      setError(e instanceof WriteError ? e.message : "Não foi possível remover o dia.");
     }
   }
 
   return (
     <AlertDialog
-      open={aberto}
-      onOpenChange={(sim) => {
-        setAberto(sim);
-        setErro(null);
+      open={open}
+      onOpenChange={(value) => {
+        setOpen(value);
+        setError(null);
       }}
     >
       <AlertDialogTrigger asChild>
@@ -56,14 +56,14 @@ export function RemoverDia({ dia }: { dia: DiaDeVenda }) {
       </AlertDialogTrigger>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>Remover o dia {rotuloDia(dia.data)}?</AlertDialogTitle>
+          <AlertDialogTitle>Remover o dia {shortDate(day.date)}?</AlertDialogTitle>
           <AlertDialogDescription>
             O dia sai da lista de dias. Para trocar a data, remova e crie de novo.
           </AlertDialogDescription>
         </AlertDialogHeader>
-        {erro && (
+        {error && (
           <p role="alert" className="text-[11px] text-warn">
-            {erro}
+            {error}
           </p>
         )}
         <AlertDialogFooter>
@@ -71,7 +71,7 @@ export function RemoverDia({ dia }: { dia: DiaDeVenda }) {
           <AlertDialogAction
             onClick={(e) => {
               e.preventDefault();
-              void remover();
+              void remove();
             }}
           >
             Remover dia

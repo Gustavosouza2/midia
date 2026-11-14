@@ -1,14 +1,14 @@
-import type { DiaDeVenda } from "@/local-db";
-import type { Cardapio } from "@/lib/menu";
-import { diaPorExtenso } from "@/lib/format";
-import { RemoverDia } from "../day/remove-day";
-import { COLUNAS } from "./columns";
-import { LinhaDoItem } from "./item-row";
+import type { SaleDay } from "@/local-db";
+import type { Menu } from "@/lib/menu";
+import { longDate } from "@/lib/format";
+import { RemoveDay } from "../day/remove-day";
+import { COLUMNS } from "./columns";
+import { ItemRow } from "./item-row";
 
-/** Até 1180px: um cartão por item (dois por linha a partir do tablet). Acima: uma tabela dentro de um card. */
-export function ListaDeItens({ dia, cardapio }: { dia: DiaDeVenda; cardapio: Cardapio }) {
-  const extenso = diaPorExtenso(dia.data);
-  const total = cardapio.itens.length;
+/** Up to 1180px: one card per item (two per row from tablet up). Above: a table inside a card. */
+export function ItemList({ day, menu }: { day: SaleDay; menu: Menu }) {
+  const longLabel = longDate(day.date);
+  const total = menu.items.length;
 
   return (
     <section
@@ -19,10 +19,10 @@ export function ListaDeItens({ dia, cardapio }: { dia: DiaDeVenda; cardapio: Car
         <div className="flex flex-col gap-0.5">
           <div className="flex flex-wrap items-baseline gap-x-2.5">
             <h2 className="text-sm font-semibold">
-              Itens em {extenso[0].toLowerCase()}
-              {extenso.slice(1)}
+              Itens em {longLabel[0].toLowerCase()}
+              {longLabel.slice(1)}
             </h2>
-            <RemoverDia dia={dia} />
+            <RemoveDay day={day} />
           </div>
           <span className="text-[11px] text-muted-foreground">
             Mudar um preço vale para as próximas vendas deste dia. Vendas já feitas mantêm o preço delas.
@@ -30,7 +30,7 @@ export function ListaDeItens({ dia, cardapio }: { dia: DiaDeVenda; cardapio: Car
           </span>
         </div>
         <span className="text-[11px] text-muted-foreground">
-          {cardapio.aVenda} de {total} {total === 1 ? "item" : "itens"} à venda
+          {menu.forSale} de {total} {total === 1 ? "item" : "itens"} à venda
         </span>
       </div>
 
@@ -42,7 +42,7 @@ export function ListaDeItens({ dia, cardapio }: { dia: DiaDeVenda; cardapio: Car
         <>
           <div
             aria-hidden="true"
-            className={`hidden gap-4 bg-muted px-5 py-2.5 text-[11px] text-muted-foreground wide:grid ${COLUNAS}`}
+            className={`hidden gap-4 bg-muted px-5 py-2.5 text-[11px] text-muted-foreground wide:grid ${COLUMNS}`}
           >
             <span>Item</span>
             <span>Preço neste dia</span>
@@ -51,8 +51,8 @@ export function ListaDeItens({ dia, cardapio }: { dia: DiaDeVenda; cardapio: Car
             <span>No cardápio do dia</span>
           </div>
           <ul className="flex flex-col gap-2.5 tablet:grid tablet:grid-cols-2 tablet:items-start wide:flex wide:items-stretch wide:gap-0">
-            {cardapio.itens.map((item) => (
-              <LinhaDoItem key={item.produto.id} diaId={dia.id} item={item} />
+            {menu.items.map((item) => (
+              <ItemRow key={item.product.id} dayId={day.id} item={item} />
             ))}
           </ul>
         </>

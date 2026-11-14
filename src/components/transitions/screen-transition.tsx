@@ -1,9 +1,9 @@
 import { ViewTransition, type ReactNode } from "react";
 
-/** Anima a entrada e a saída da tela quando a navegação vem do menu (Link com transitionTypes "tela"). */
-export function TransicaoDeTela({ children }: { children: ReactNode }) {
+/** Animates the screen entering and leaving when navigation comes from the menu (Link with transitionTypes "screen"). */
+export function ScreenTransition({ children }: { children: ReactNode }) {
   return (
-    <ViewTransition enter={{ tela: "tela", default: "none" }} exit={{ tela: "tela", default: "none" }} default="none">
+    <ViewTransition enter={{ screen: "screen", default: "none" }} exit={{ screen: "screen", default: "none" }} default="none">
       {children}
     </ViewTransition>
   );

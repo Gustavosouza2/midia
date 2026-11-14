@@ -1,21 +1,21 @@
-import { hojeLocal } from "@/lib/format";
-import type { CantinaLocalDb } from "./index";
+import { localToday } from "@/lib/format";
+import type { CanteenLocalDb } from "./index";
 
 /**
- * Tudo o que as telas leem do banco local, mais a data de hoje. O aparelho só guarda os dados
- * da própria cantina, então a leitura não filtra por cantina_id.
+ * Everything the screens read from the local database, plus today's date. The device only stores
+ * its own canteen's data, so the read does not filter by cantina_id.
  */
-export async function lerBancoLocal(db: CantinaLocalDb) {
-  const [dias, pedidos, itens, pagamentos, produtos, clientes, precosDoDia] = await Promise.all([
-    db.diasDeVenda.toArray(),
-    db.pedidos.toArray(),
-    db.itensPedido.toArray(),
-    db.pagamentos.toArray(),
-    db.produtos.toArray(),
-    db.clientes.toArray(),
-    db.precosDoDia.toArray(),
+export async function readLocalDb(db: CanteenLocalDb) {
+  const [days, orders, items, payments, products, customers, dayMenuItems] = await Promise.all([
+    db.saleDays.toArray(),
+    db.orders.toArray(),
+    db.orderItems.toArray(),
+    db.payments.toArray(),
+    db.products.toArray(),
+    db.customers.toArray(),
+    db.dayMenuItems.toArray(),
   ]);
-  return { dias, pedidos, itens, pagamentos, produtos, clientes, precosDoDia, hoje: hojeLocal() };
+  return { days, orders, items, payments, products, customers, dayMenuItems, today: localToday() };
 }
 
-export type BancoLocal = Awaited<ReturnType<typeof lerBancoLocal>>;
+export type LocalData = Awaited<ReturnType<typeof readLocalDb>>;

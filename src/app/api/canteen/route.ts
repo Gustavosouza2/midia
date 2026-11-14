@@ -1,22 +1,22 @@
 import { eq } from "drizzle-orm";
 import { getDb, schema } from "@/db";
-import { CANTINA_SLUG } from "@/server/canteen";
+import { CANTEEN_SLUG } from "@/server/canteen";
 
 export async function GET() {
-  const { cantinas } = schema;
-  const [cantina] = await getDb()
+  const { canteens } = schema;
+  const [canteen] = await getDb()
     .select({
-      id: cantinas.id,
-      nome: cantinas.nome,
-      slug: cantinas.slug,
-      atualizadoEm: cantinas.atualizadoEm,
-      seq: cantinas.seq,
+      id: canteens.id,
+      name: canteens.name,
+      slug: canteens.slug,
+      updatedAt: canteens.updatedAt,
+      seq: canteens.seq,
     })
-    .from(cantinas)
-    .where(eq(cantinas.slug, CANTINA_SLUG));
+    .from(canteens)
+    .where(eq(canteens.slug, CANTEEN_SLUG));
 
-  if (!cantina) {
-    return Response.json({ erro: `Cantina "${CANTINA_SLUG}" não encontrada.` }, { status: 404 });
+  if (!canteen) {
+    return Response.json({ error: `Canteen "${CANTEEN_SLUG}" not found.` }, { status: 404 });
   }
-  return Response.json({ cantina });
+  return Response.json({ canteen });
 }

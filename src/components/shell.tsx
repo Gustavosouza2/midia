@@ -5,61 +5,61 @@ import { usePathname } from "next/navigation";
 import { useEffect, type ComponentType, type ReactNode } from "react";
 import { Badge } from "@/components/ui/badge";
 import { getLocalDb } from "@/local-db";
-import { baixarCantina } from "@/local-db/download-canteen";
-import { contarPendentes } from "@/local-db/count-pending";
-import { useLeituraLocal } from "@/local-db/use-local-query";
-import { IconeCardapio } from "./icons/menu-icon";
-import { IconePainel } from "./icons/dashboard-icon";
-import { IconePendentes } from "./icons/pending-icon";
-import { IconeVendas } from "./icons/sales-icon";
-import { Marca } from "./brand";
+import { downloadCanteen } from "@/local-db/download-canteen";
+import { countPending } from "@/local-db/count-pending";
+import { useLocalQuery } from "@/local-db/use-local-query";
+import { MenuIcon } from "./icons/menu-icon";
+import { DashboardIcon } from "./icons/dashboard-icon";
+import { PendingIcon } from "./icons/pending-icon";
+import { SalesIcon } from "./icons/sales-icon";
+import { Brand } from "./brand";
 
-type ItemMenu = {
+type NavItem = {
   href: string;
-  rotulo: string;
-  Icone: ComponentType<{ tamanho?: number }>;
+  label: string;
+  Icon: ComponentType<{ size?: number }>;
 };
 
-const MENU: ItemMenu[] = [
-  { href: "/", rotulo: "Painel", Icone: IconePainel },
-  { href: "/vendas", rotulo: "Vendas", Icone: IconeVendas },
-  { href: "/pendentes", rotulo: "Pendentes", Icone: IconePendentes },
-  { href: "/cardapio", rotulo: "Cardápio", Icone: IconeCardapio },
+const MENU: NavItem[] = [
+  { href: "/", label: "Painel", Icon: DashboardIcon },
+  { href: "/sales", label: "Vendas", Icon: SalesIcon },
+  { href: "/pending", label: "Pendentes", Icon: PendingIcon },
+  { href: "/menu", label: "Cardápio", Icon: MenuIcon },
 ];
 
 /**
- * Moldura do app (DESIGN.md, "Componentes"):
- * - celular (até 560px): cabeçalho branco e barra de abas fixa embaixo;
- * - tablet (561–860px): menu numa barra no topo;
- * - desktop (861px+): menu lateral de 232px dentro de um painel branco com borda.
+ * App frame (DESIGN.md, "Components"):
+ * - phone (up to 560px): white header and a tab bar fixed at the bottom;
+ * - tablet (561–860px): menu in a bar at the top;
+ * - desktop (861px+): 232px side menu inside a white bordered panel.
  */
 export function Shell({ children }: { children: ReactNode }) {
-  const caminho = usePathname();
+  const pathname = usePathname();
   useEffect(() => {
-    void baixarCantina(getLocalDb());
+    void downloadCanteen(getLocalDb());
   }, []);
-  const atual = MENU.find((item) => item.href === caminho) ?? MENU[0];
-  const pendentes = useLeituraLocal(contarPendentes);
+  const current = MENU.find((item) => item.href === pathname) ?? MENU[0];
+  const pending = useLocalQuery(countPending);
 
   return (
     <div className="flex min-h-dvh desk:p-4">
       <div className="flex min-w-0 flex-1 flex-col bg-page tablet:bg-background desk:flex-row desk:overflow-hidden desk:rounded-[14px] desk:border desk:border-border">
-        {/* Celular: cabeçalho com o nome da tela */}
+        {/* Phone: header with the screen name */}
         <header className="sticky top-0 z-10 flex items-center gap-2.5 border-b border-border bg-background px-4 pt-4 pb-3 tablet:hidden">
-          <Marca />
+          <Brand />
           <div className="flex flex-col leading-[1.2]">
-            <strong className="text-[15px] font-semibold">{atual.rotulo}</strong>
+            <strong className="text-[15px] font-semibold">{current.label}</strong>
             <span className="text-[11px] text-muted-foreground">Cantina · Mídia</span>
           </div>
         </header>
 
-        {/* Tablet e desktop: menu */}
+        {/* Tablet and desktop: menu */}
         <nav
           aria-label="Menu principal"
           className="hidden flex-wrap items-center gap-2.5 border-b border-border px-4 py-3 tablet:flex desk:w-[232px] desk:flex-none desk:flex-col desk:flex-nowrap desk:items-stretch desk:gap-[18px] desk:border-r desk:border-b-0 desk:px-3.5 desk:py-[18px]"
         >
           <div className="flex items-center gap-2.5 px-1">
-            <Marca />
+            <Brand />
             <div className="flex flex-col leading-[1.2]">
               <strong className="text-sm font-semibold">Cantina</strong>
               <span className="text-[11px] text-muted-foreground">Mídia · Casa do Pai</span>
@@ -69,25 +69,25 @@ export function Shell({ children }: { children: ReactNode }) {
           <div className="ml-auto flex gap-0.5 desk:ml-0 desk:flex-col">
             <span className="hidden px-2 pb-1.5 text-[11px] text-muted-foreground desk:block">Principal</span>
             {MENU.map((item) => {
-              const ativo = item.href === atual.href;
-              const contador = item.href === "/pendentes" && pendentes ? pendentes : null;
+              const active = item.href === current.href;
+              const badgeCount = item.href === "/pending" && pending ? pending : null;
               return (
-                <Link transitionTypes={["tela"]}
+                <Link transitionTypes={["screen"]}
                   key={item.href}
                   href={item.href}
-                  aria-current={ativo ? "page" : undefined}
+                  aria-current={active ? "page" : undefined}
                   className="group flex h-[34px] items-center gap-2.5 rounded-lg px-2.5 transition-colors duration-200 whitespace-nowrap text-text-2 hover:bg-accent aria-[current=page]:bg-primary aria-[current=page]:text-primary-foreground"
                 >
-                  <item.Icone />
-                  {item.rotulo}
-                  {contador && (
+                  <item.Icon />
+                  {item.label}
+                  {badgeCount && (
                     <Badge
                       variant="secondary"
-                      size="contador"
-                      aria-label={`${contador} em aberto`}
+                      size="counter"
+                      aria-label={`${badgeCount} em aberto`}
                       className="ml-auto hidden min-w-[18px] desk:inline-flex group-aria-[current=page]:bg-white/15 group-aria-[current=page]:text-inherit"
                     >
-                      {contador}
+                      {badgeCount}
                     </Badge>
                   )}
                 </Link>
@@ -105,34 +105,34 @@ export function Shell({ children }: { children: ReactNode }) {
           {children}
         </main>
 
-        {/* Celular: barra de abas fixa */}
+        {/* Phone: fixed tab bar */}
         <nav
           aria-label="Menu"
           className="fixed inset-x-0 bottom-0 z-10 grid grid-cols-4 border-t border-border bg-background px-1.5 pt-1.5 pb-[calc(14px+env(safe-area-inset-bottom))] tablet:hidden"
         >
           {MENU.map((item) => {
-            const conteudo = (ativo: boolean) => (
+            const content = (active: boolean) => (
               <>
                 <span
                   className={`flex h-7 w-11 items-center justify-center rounded-[9px] transition-colors duration-200 ${
-                    ativo ? "bg-primary text-primary-foreground" : ""
+                    active ? "bg-primary text-primary-foreground" : ""
                   }`}
                 >
-                  <item.Icone tamanho={16} />
+                  <item.Icon size={16} />
                 </span>
-                {item.rotulo}
+                {item.label}
               </>
             );
             const classes = "flex flex-col items-center gap-[3px] py-1 text-[10px] transition-colors duration-200";
-            const ativo = item.href === atual.href;
+            const active = item.href === current.href;
             return (
-              <Link transitionTypes={["tela"]}
+              <Link transitionTypes={["screen"]}
                 key={item.href}
                 href={item.href}
-                aria-current={ativo ? "page" : undefined}
-                className={`${classes} ${ativo ? "font-semibold text-foreground" : "text-muted-foreground"}`}
+                aria-current={active ? "page" : undefined}
+                className={`${classes} ${active ? "font-semibold text-foreground" : "text-muted-foreground"}`}
               >
-                {conteudo(ativo)}
+                {content(active)}
               </Link>
             );
           })}

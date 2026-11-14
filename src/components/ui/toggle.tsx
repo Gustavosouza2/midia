@@ -4,7 +4,7 @@ import * as React from "react";
 import { cn } from "cn";
 import { Toggle as TogglePrimitive } from "radix-ui";
 
-// Segmento do DESIGN.md: texto `muted-foreground`; ligado, fundo `primary` e texto branco.
+// DESIGN.md segment: `muted-foreground` text; when on, `primary` background and white text.
 const toggleClasses =
   "inline-flex h-9 flex-1 items-center justify-center gap-2 rounded-[7px] px-3 text-xs whitespace-nowrap text-muted-foreground outline-none transition-colors hover:text-foreground focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring disabled:pointer-events-none disabled:opacity-50 tablet:h-[30px] tablet:rounded-md data-[state=on]:bg-primary data-[state=on]:text-primary-foreground [&_svg]:pointer-events-none [&_svg]:shrink-0";
 

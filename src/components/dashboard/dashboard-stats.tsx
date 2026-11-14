@@ -1,28 +1,28 @@
-import { formatarBRL, plural } from "@/lib/format";
-import type { Painel } from "@/lib/dashboard";
-import { FaixaDeNumeros } from "../stat-strip";
-import { Numero } from "../stat";
+import { formatBRL, plural } from "@/lib/format";
+import type { Dashboard } from "@/lib/dashboard";
+import { StatStrip } from "../stat-strip";
+import { Stat } from "../stat";
 
-export function NumerosDoPainel({ numeros }: { numeros: Painel["numeros"] }) {
+export function DashboardStats({ stats }: { stats: Dashboard["stats"] }) {
   return (
-    <FaixaDeNumeros>
-      <Numero rotulo="Recebido" valor={formatarBRL(numeros.recebido)}>
+    <StatStrip>
+      <Stat label="Recebido" value={formatBRL(stats.received)}>
         <div aria-hidden="true" className="mt-0.5 h-1.5 overflow-hidden rounded-xs bg-border">
-          <div className="h-full bg-ok-fill transition-[width] duration-500 ease-out" style={{ width: `${numeros.pctRecebido}%` }} />
+          <div className="h-full bg-ok-fill transition-[width] duration-500 ease-out" style={{ width: `${stats.receivedPct}%` }} />
         </div>
         <span>
-          {numeros.pctRecebido}% de {formatarBRL(numeros.vendido)} vendidos
+          {stats.receivedPct}% de {formatBRL(stats.sold)} vendidos
         </span>
-      </Numero>
-      <Numero rotulo="Pendente" valor={formatarBRL(numeros.pendente)} tom="warn">
-        {plural(numeros.pessoasPendentes, "pessoa", "pessoas")} para receber
-      </Numero>
-      <Numero rotulo="Itens vendidos" valor={String(numeros.itens)}>
-        {plural(numeros.vendas, "venda registrada", "vendas registradas")}
-      </Numero>
-      <Numero rotulo="Reservas" valor={String(numeros.reservas)}>
-        {numeros.reservas ? `${formatarBRL(numeros.valorReservas)} a entregar` : "nenhuma neste período"}
-      </Numero>
-    </FaixaDeNumeros>
+      </Stat>
+      <Stat label="Pendente" value={formatBRL(stats.pending)} tone="warn">
+        {plural(stats.pendingPeople, "pessoa", "pessoas")} para receber
+      </Stat>
+      <Stat label="Itens vendidos" value={String(stats.items)}>
+        {plural(stats.sales, "venda registrada", "vendas registradas")}
+      </Stat>
+      <Stat label="Reservas" value={String(stats.reservations)}>
+        {stats.reservations ? `${formatBRL(stats.reservationsAmount)} a entregar` : "nenhuma neste período"}
+      </Stat>
+    </StatStrip>
   );
 }

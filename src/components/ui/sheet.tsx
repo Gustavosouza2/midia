@@ -5,8 +5,8 @@ import { cn } from "cn";
 import { XIcon } from "lucide-react";
 import { Dialog as SheetPrimitive } from "radix-ui";
 
-// Folha do DESIGN.md (Nova venda, Novo dia no celular): sobe de baixo, raio 18px em cima,
-// alça cinza no topo e botão × de 32px. Fundo escurecido em `foreground` a 35%.
+// DESIGN.md sheet (Nova venda, Novo dia on the phone): rises from the bottom, 18px top radius,
+// gray handle at the top and a 32px × button. Backdrop dimmed with `foreground` at 35%.
 
 function Sheet({ ...props }: React.ComponentProps<typeof SheetPrimitive.Root>) {
   return <SheetPrimitive.Root data-slot="sheet" {...props} />;

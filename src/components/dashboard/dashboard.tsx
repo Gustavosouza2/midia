@@ -1,27 +1,27 @@
 "use client";
 
 import { startTransition, useMemo, useState } from "react";
-import { FiltroDeDia } from "@/components/day/day-filter";
-import { lerBancoLocal } from "@/local-db/read-local-db";
-import { useLeituraLocal } from "@/local-db/use-local-query";
-import { montarPainel, type Periodo } from "@/lib/dashboard";
-import { TrocaSuave } from "../transitions/smooth-swap";
-import { BoasVindas } from "./welcome";
-import { MigalhaDoPainel } from "./dashboard-breadcrumb";
-import { NumerosDoPainel } from "./dashboard-stats";
-import { PrecisaDeAtencao } from "./needs-attention";
-import { VendidoPorDia } from "./sold-per-day";
+import { DayFilter } from "@/components/day/day-filter";
+import { readLocalDb } from "@/local-db/read-local-db";
+import { useLocalQuery } from "@/local-db/use-local-query";
+import { buildDashboard, type Period } from "@/lib/dashboard";
+import { SmoothSwap } from "../transitions/smooth-swap";
+import { Welcome } from "./welcome";
+import { DashboardBreadcrumb } from "./dashboard-breadcrumb";
+import { DashboardStats } from "./dashboard-stats";
+import { NeedsAttention } from "./needs-attention";
+import { SoldPerDay } from "./sold-per-day";
 
-export function Painel() {
-  const dados = useLeituraLocal(lerBancoLocal);
-  const [periodo, setPeriodo] = useState<Periodo>("todos");
-  const escolherPeriodo = (p: Periodo) => startTransition(() => setPeriodo(p));
-  const painel = useMemo(() => dados && montarPainel(dados, periodo, dados.hoje), [dados, periodo]);
+export function Dashboard() {
+  const data = useLocalQuery(readLocalDb);
+  const [period, setPeriod] = useState<Period>("all");
+  const selectPeriod = (p: Period) => startTransition(() => setPeriod(p));
+  const dashboard = useMemo(() => data && buildDashboard(data, period, data.today), [data, period]);
 
-  if (!dados || !painel) {
+  if (!data || !dashboard) {
     return (
       <>
-        <MigalhaDoPainel />
+        <DashboardBreadcrumb />
         <p className="text-[11px] text-muted-foreground" role="status">
           Carregando…
         </p>
@@ -31,31 +31,31 @@ export function Painel() {
 
   return (
     <>
-      <MigalhaDoPainel />
-      <TrocaSuave>
-        <BoasVindas proximo={painel.proximo} reservas={painel.reservasDoProximo} />
+      <DashboardBreadcrumb />
+      <SmoothSwap>
+        <Welcome upcoming={dashboard.upcoming} reservations={dashboard.upcomingReservations} />
 
         <section className="flex flex-col gap-3">
-          <FiltroDeDia
-            dias={painel.dias}
-            hoje={dados.hoje}
-            valor={periodo}
-            aoEscolher={escolherPeriodo}
-            rotulo="Período"
-            todos
+          <DayFilter
+            days={dashboard.days}
+            today={data.today}
+            value={period}
+            onSelect={selectPeriod}
+            label="Período"
+            all
           />
-          <NumerosDoPainel numeros={painel.numeros} />
+          <DashboardStats stats={dashboard.stats} />
         </section>
 
         <section className="grid items-start gap-4 tablet:gap-5 wide:grid-cols-[minmax(0,1.55fr)_minmax(0,1fr)]">
-          <VendidoPorDia dias={painel.porDia} periodo={periodo} aoEscolher={escolherPeriodo} />
-          <PrecisaDeAtencao
-            reservas={painel.reservas}
-            pendentes={painel.pendentes}
-            pessoasPendentes={painel.numeros.pessoasPendentes}
+          <SoldPerDay days={dashboard.byDay} period={period} onSelect={selectPeriod} />
+          <NeedsAttention
+            reservations={dashboard.reservations}
+            pending={dashboard.pending}
+            pendingPeople={dashboard.stats.pendingPeople}
           />
         </section>
-      </TrocaSuave>
+      </SmoothSwap>
     </>
   );
 }

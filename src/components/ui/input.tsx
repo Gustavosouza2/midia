@@ -1,8 +1,8 @@
 import * as React from "react";
 import { cn } from "cn";
 
-// Campo do DESIGN.md: fundo `muted`, borda `input`. Celular 42px e raio 10px; tablet e desktop
-// 34px e raio 8px. Foco com contorno `ring`, como os botões.
+// DESIGN.md input: `muted` background, `input` border. Phone 42px and 10px radius; tablet and desktop
+// 34px and 8px radius. Focus with a `ring` outline, like the buttons.
 function Input({ className, type, ...props }: React.ComponentProps<"input">) {
   return (
     <input

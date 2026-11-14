@@ -1,52 +1,52 @@
 import "fake-indexeddb/auto";
 import { describe, expect, it } from "vitest";
-import { CantinaLocalDb } from "./index";
+import { CanteenLocalDb } from "./index";
 
-describe("banco local", () => {
-  it("guarda itens na outbox em ordem de chegada", async () => {
-    const db = new CantinaLocalDb();
-    const agora = new Date().toISOString();
+describe("local database", () => {
+  it("keeps outbox items in arrival order", async () => {
+    const db = new CanteenLocalDb();
+    const now = new Date().toISOString();
 
     await db.outbox.add({
-      tabela: "pedidos",
-      registroId: crypto.randomUUID(),
-      operacao: "inserir",
+      table: "orders",
+      recordId: crypto.randomUUID(),
+      operation: "insert",
       payload: { status: "recebido" },
-      criadoEm: agora,
+      createdAt: now,
     });
     await db.outbox.add({
-      tabela: "pagamentos",
-      registroId: crypto.randomUUID(),
-      operacao: "inserir",
-      payload: { valorCentavos: 1200 },
-      criadoEm: agora,
+      table: "payments",
+      recordId: crypto.randomUUID(),
+      operation: "insert",
+      payload: { amountCents: 1200 },
+      createdAt: now,
     });
 
-    const fila = await db.outbox.orderBy("id").toArray();
-    expect(fila.map((item) => item.tabela)).toEqual(["pedidos", "pagamentos"]);
+    const queue = await db.outbox.orderBy("id").toArray();
+    expect(queue.map((item) => item.table)).toEqual(["orders", "payments"]);
     db.close();
   });
 
-  it("busca o cardápio de um dia em precosDoDia", async () => {
-    const db = new CantinaLocalDb();
-    const cantinaId = crypto.randomUUID();
-    const [dia, outroDia] = [crypto.randomUUID(), crypto.randomUUID()];
-    const preco = (diaId: string, precoCentavos: number) => ({
+  it("finds a day's menu in dayMenuItems", async () => {
+    const db = new CanteenLocalDb();
+    const canteenId = crypto.randomUUID();
+    const [day, otherDay] = [crypto.randomUUID(), crypto.randomUUID()];
+    const price = (dayId: string, priceCents: number) => ({
       id: crypto.randomUUID(),
-      cantinaId,
-      diaId,
-      produtoId: crypto.randomUUID(),
-      precoCentavos,
-      ativo: true,
-      quantidade: null,
-      atualizadoEm: new Date().toISOString(),
+      canteenId,
+      dayId,
+      productId: crypto.randomUUID(),
+      priceCents,
+      active: true,
+      quantity: null,
+      updatedAt: new Date().toISOString(),
       seq: 1,
     });
 
-    await db.precosDoDia.bulkAdd([preco(dia, 1200), preco(dia, 600), preco(outroDia, 1000)]);
+    await db.dayMenuItems.bulkAdd([price(day, 1200), price(day, 600), price(otherDay, 1000)]);
 
-    const cardapio = await db.precosDoDia.where("diaId").equals(dia).toArray();
-    expect(cardapio.map((p) => p.precoCentavos).sort()).toEqual([1200, 600].sort());
+    const menu = await db.dayMenuItems.where("dayId").equals(day).toArray();
+    expect(menu.map((p) => p.priceCents).sort()).toEqual([1200, 600].sort());
     db.close();
   });
 });

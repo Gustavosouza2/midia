@@ -1,192 +1,192 @@
-import type { Cliente, DiaDeVenda, ItemPedido, Pagamento, Pedido, Produto } from "@/local-db";
-import { diasAtivos, proximoDia } from "./days";
-import { diasEntre } from "./format";
+import type { Customer, SaleDay, OrderItem, Payment, Order, Product } from "@/local-db";
+import { activeDays, upcomingDay } from "./days";
+import { daysBetween } from "./format";
 
-/** Tudo o que o Painel lê do banco local. */
-export type DadosPainel = {
-  dias: DiaDeVenda[];
-  pedidos: Pedido[];
-  itens: ItemPedido[];
-  pagamentos: Pagamento[];
-  produtos: Produto[];
-  clientes: Cliente[];
+/** Everything the Dashboard reads from the local database. */
+export type DashboardData = {
+  days: SaleDay[];
+  orders: Order[];
+  items: OrderItem[];
+  payments: Payment[];
+  products: Product[];
+  customers: Customer[];
 };
 
-/** "todos" ou o id de um dia de venda. */
-export type Periodo = "todos" | string;
+/** "all" or the id of a sale day. */
+export type Period = "all" | string;
 
-/** Pendente antigo: em aberto há 14 dias ou mais (DESIGN.md). */
-export const DIAS_PENDENTE_ANTIGO = 14;
-/** "Vendido por dia" mostra só os dias mais recentes. */
-export const DIAS_NO_GRAFICO = 8;
+/** Old pending order: outstanding for 14 days or more (DESIGN.md). */
+export const OLD_PENDING_DAYS = 14;
+/** "Vendido por dia" shows only the most recent days. */
+export const CHART_DAYS = 8;
 
-export type ResumoPedido = {
+export type OrderSummary = {
   id: string;
-  diaId: string;
-  data: string;
-  nome: string;
-  descricao: string;
-  valor: number;
-  aberto: number;
-  idadeDias: number;
+  dayId: string;
+  date: string;
+  name: string;
+  description: string;
+  amount: number;
+  due: number;
+  ageDays: number;
 };
 
-export type ResumoDia = {
-  dia: DiaDeVenda;
-  proximo: boolean;
-  vendido: number;
-  recebido: number;
-  pctRecebido: number;
-  itens: number;
-  vendas: number;
-  reservas: number;
-  valorReservas: number;
+export type DaySummary = {
+  day: SaleDay;
+  upcoming: boolean;
+  sold: number;
+  received: number;
+  receivedPct: number;
+  items: number;
+  sales: number;
+  reservations: number;
+  reservationsAmount: number;
 };
 
-export type Painel = {
-  dias: DiaDeVenda[];
-  proximo: DiaDeVenda | null;
-  reservasDoProximo: number;
-  numeros: {
-    vendido: number;
-    recebido: number;
-    pendente: number;
-    pctRecebido: number;
-    pessoasPendentes: number;
-    itens: number;
-    vendas: number;
-    reservas: number;
-    valorReservas: number;
+export type Dashboard = {
+  days: SaleDay[];
+  upcoming: SaleDay | null;
+  upcomingReservations: number;
+  stats: {
+    sold: number;
+    received: number;
+    pending: number;
+    receivedPct: number;
+    pendingPeople: number;
+    items: number;
+    sales: number;
+    reservations: number;
+    reservationsAmount: number;
   };
-  porDia: ResumoDia[];
-  reservas: ResumoPedido[];
-  pendentes: ResumoPedido[];
+  byDay: DaySummary[];
+  reservations: OrderSummary[];
+  pending: OrderSummary[];
 };
 
 /**
- * Calcula os números do Painel a partir das linhas do banco local.
- * Reserva = pedido com status "recebido"; os outros (exceto cancelado) contam como vendidos.
- * Recebido = pagamentos não estornados, limitado ao valor do pedido.
+ * Computes the Dashboard stats from the local database rows.
+ * Reservation = order with status "recebido"; the others (except canceled) count as sold.
+ * Received = payments not refunded, capped at the order amount.
  */
-export function montarPainel(dados: DadosPainel, periodo: Periodo, hoje: string): Painel {
-  const dias = diasAtivos(dados.dias);
-  const diaPorId = new Map(dias.map((d) => [d.id, d]));
-  const proximo = proximoDia(dias, hoje);
+export function buildDashboard(data: DashboardData, period: Period, today: string): Dashboard {
+  const days = activeDays(data.days);
+  const dayById = new Map(days.map((d) => [d.id, d]));
+  const upcoming = upcomingDay(days, today);
 
-  const produtoPorId = new Map(dados.produtos.map((p) => [p.id, p]));
-  const clientePorId = new Map(dados.clientes.map((c) => [c.id, c]));
-  const itensPorPedido = agrupar(
-    dados.itens.filter((i) => !i.canceladoEm),
-    (i) => i.pedidoId,
+  const productById = new Map(data.products.map((p) => [p.id, p]));
+  const customerById = new Map(data.customers.map((c) => [c.id, c]));
+  const itemsByOrder = groupBy(
+    data.items.filter((i) => !i.canceledAt),
+    (i) => i.orderId,
   );
-  const pagoPorPedido = new Map<string, number>();
-  for (const p of dados.pagamentos) {
-    if (p.estornadoEm) continue;
-    pagoPorPedido.set(p.pedidoId, (pagoPorPedido.get(p.pedidoId) ?? 0) + p.valorCentavos);
+  const paidByOrder = new Map<string, number>();
+  for (const p of data.payments) {
+    if (p.refundedAt) continue;
+    paidByOrder.set(p.orderId, (paidByOrder.get(p.orderId) ?? 0) + p.amountCents);
   }
 
-  const pedidos = dados.pedidos
-    .filter((p) => p.status !== "cancelado" && diaPorId.has(p.diaId))
+  const orders = data.orders
+    .filter((p) => p.status !== "cancelado" && dayById.has(p.dayId))
     .map((p) => {
-      const dia = diaPorId.get(p.diaId)!;
-      const itens = itensPorPedido.get(p.id) ?? [];
-      const valor = itens.reduce((soma, i) => soma + i.quantidade * i.precoUnitarioCentavos, 0);
-      const recebido = Math.min(pagoPorPedido.get(p.id) ?? 0, valor);
+      const day = dayById.get(p.dayId)!;
+      const items = itemsByOrder.get(p.id) ?? [];
+      const amount = items.reduce((sum, i) => sum + i.quantity * i.unitPriceCents, 0);
+      const received = Math.min(paidByOrder.get(p.id) ?? 0, amount);
       return {
-        pedido: p,
-        reserva: p.status === "recebido",
-        qtd: itens.reduce((soma, i) => soma + i.quantidade, 0),
-        valor,
-        recebido,
-        resumo: {
+        order: p,
+        reservation: p.status === "recebido",
+        qty: items.reduce((sum, i) => sum + i.quantity, 0),
+        amount,
+        received,
+        summary: {
           id: p.id,
-          diaId: dia.id,
-          data: dia.data,
-          nome: (p.clienteId && clientePorId.get(p.clienteId)?.nome) || "Sem nome",
-          descricao: itens
-            .map((i) => `${i.quantidade}× ${produtoPorId.get(i.produtoId)?.nome ?? "Item"}`)
+          dayId: day.id,
+          date: day.date,
+          name: (p.customerId && customerById.get(p.customerId)?.name) || "Sem nome",
+          description: items
+            .map((i) => `${i.quantity}× ${productById.get(i.productId)?.name ?? "Item"}`)
             .join(", "),
-          valor,
-          aberto: valor - recebido,
-          idadeDias: Math.max(0, diasEntre(dia.data, hoje)),
-        } satisfies ResumoPedido,
+          amount,
+          due: amount - received,
+          ageDays: Math.max(0, daysBetween(day.date, today)),
+        } satisfies OrderSummary,
       };
     });
 
-  const porDia: ResumoDia[] = dias.map((dia) => {
-    const doDia = pedidos.filter((p) => p.pedido.diaId === dia.id);
-    const vendidos = doDia.filter((p) => !p.reserva);
-    const reservas = doDia.filter((p) => p.reserva);
-    const vendido = somar(vendidos, (p) => p.valor);
-    const recebido = somar(vendidos, (p) => p.recebido);
+  const byDay: DaySummary[] = days.map((day) => {
+    const ofDay = orders.filter((p) => p.order.dayId === day.id);
+    const soldOrders = ofDay.filter((p) => !p.reservation);
+    const reservations = ofDay.filter((p) => p.reservation);
+    const sold = sumBy(soldOrders, (p) => p.amount);
+    const received = sumBy(soldOrders, (p) => p.received);
     return {
-      dia,
-      proximo: dia.id === proximo?.id,
-      vendido,
-      recebido,
-      pctRecebido: percentual(recebido, vendido),
-      itens: somar(vendidos, (p) => p.qtd),
-      vendas: vendidos.length,
-      reservas: reservas.length,
-      valorReservas: somar(reservas, (p) => p.valor),
+      day,
+      upcoming: day.id === upcoming?.id,
+      sold,
+      received,
+      receivedPct: percent(received, sold),
+      items: sumBy(soldOrders, (p) => p.qty),
+      sales: soldOrders.length,
+      reservations: reservations.length,
+      reservationsAmount: sumBy(reservations, (p) => p.amount),
     };
   });
 
-  const noPeriodo = (diaId: string) => periodo === "todos" || periodo === diaId;
-  const selecionados = porDia.filter((d) => noPeriodo(d.dia.id));
-  const vendido = somar(selecionados, (d) => d.vendido);
-  const recebido = somar(selecionados, (d) => d.recebido);
+  const inPeriod = (dayId: string) => period === "all" || period === dayId;
+  const selectedDays = byDay.filter((d) => inPeriod(d.day.id));
+  const sold = sumBy(selectedDays, (d) => d.sold);
+  const received = sumBy(selectedDays, (d) => d.received);
 
-  const reservas = pedidos
-    .filter((p) => p.reserva && noPeriodo(p.pedido.diaId))
-    .map((p) => p.resumo)
-    .sort((a, b) => a.data.localeCompare(b.data));
-  const pendentes = pedidos
-    .filter((p) => !p.reserva && p.resumo.aberto > 0 && noPeriodo(p.pedido.diaId))
-    .map((p) => p.resumo)
-    .sort((a, b) => b.idadeDias - a.idadeDias || b.aberto - a.aberto);
-  const pessoasPendentes = new Set(
-    pedidos
-      .filter((p) => !p.reserva && p.resumo.aberto > 0 && noPeriodo(p.pedido.diaId))
-      .map((p) => p.pedido.clienteId ?? p.pedido.id),
+  const reservations = orders
+    .filter((p) => p.reservation && inPeriod(p.order.dayId))
+    .map((p) => p.summary)
+    .sort((a, b) => a.date.localeCompare(b.date));
+  const pending = orders
+    .filter((p) => !p.reservation && p.summary.due > 0 && inPeriod(p.order.dayId))
+    .map((p) => p.summary)
+    .sort((a, b) => b.ageDays - a.ageDays || b.due - a.due);
+  const pendingPeople = new Set(
+    orders
+      .filter((p) => !p.reservation && p.summary.due > 0 && inPeriod(p.order.dayId))
+      .map((p) => p.order.customerId ?? p.order.id),
   ).size;
 
   return {
-    dias,
-    proximo,
-    reservasDoProximo: porDia.find((d) => d.proximo)?.reservas ?? 0,
-    numeros: {
-      vendido,
-      recebido,
-      pendente: vendido - recebido,
-      pctRecebido: percentual(recebido, vendido),
-      pessoasPendentes,
-      itens: somar(selecionados, (d) => d.itens),
-      vendas: somar(selecionados, (d) => d.vendas),
-      reservas: somar(selecionados, (d) => d.reservas),
-      valorReservas: somar(selecionados, (d) => d.valorReservas),
+    days,
+    upcoming,
+    upcomingReservations: byDay.find((d) => d.upcoming)?.reservations ?? 0,
+    stats: {
+      sold,
+      received,
+      pending: sold - received,
+      receivedPct: percent(received, sold),
+      pendingPeople,
+      items: sumBy(selectedDays, (d) => d.items),
+      sales: sumBy(selectedDays, (d) => d.sales),
+      reservations: sumBy(selectedDays, (d) => d.reservations),
+      reservationsAmount: sumBy(selectedDays, (d) => d.reservationsAmount),
     },
-    porDia: porDia.slice(0, DIAS_NO_GRAFICO),
-    reservas,
-    pendentes,
+    byDay: byDay.slice(0, CHART_DAYS),
+    reservations,
+    pending,
   };
 }
 
-function percentual(parte: number, total: number): number {
-  return total ? Math.round((parte / total) * 100) : 0;
+function percent(part: number, total: number): number {
+  return total ? Math.round((part / total) * 100) : 0;
 }
 
-function somar<T>(lista: T[], valor: (item: T) => number): number {
-  return lista.reduce((soma, item) => soma + valor(item), 0);
+function sumBy<T>(list: T[], amount: (item: T) => number): number {
+  return list.reduce((sum, item) => sum + amount(item), 0);
 }
 
-function agrupar<T>(lista: T[], chave: (item: T) => string): Map<string, T[]> {
-  const mapa = new Map<string, T[]>();
-  for (const item of lista) {
-    const k = chave(item);
-    const grupo = mapa.get(k);
-    if (grupo) grupo.push(item);
-    else mapa.set(k, [item]);
+function groupBy<T>(list: T[], key: (item: T) => string): Map<string, T[]> {
+  const map = new Map<string, T[]>();
+  for (const item of list) {
+    const k = key(item);
+    const group = map.get(k);
+    if (group) group.push(item);
+    else map.set(k, [item]);
   }
-  return mapa;
+  return map;
 }

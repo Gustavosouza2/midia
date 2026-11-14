@@ -1,22 +1,22 @@
 import { asc, eq } from "drizzle-orm";
 import { getDb, schema } from "@/db";
-import { CANTINA_SLUG } from "@/server/canteen";
+import { CANTEEN_SLUG } from "@/server/canteen";
 
 export async function GET() {
-  const { cantinas, produtos } = schema;
-  const lista = await getDb()
+  const { canteens, products } = schema;
+  const list = await getDb()
     .select({
-      id: produtos.id,
-      nome: produtos.nome,
-      precoCentavos: produtos.precoCentavos,
-      ativo: produtos.ativo,
-      atualizadoEm: produtos.atualizadoEm,
-      seq: produtos.seq,
+      id: products.id,
+      name: products.name,
+      priceCents: products.priceCents,
+      active: products.active,
+      updatedAt: products.updatedAt,
+      seq: products.seq,
     })
-    .from(produtos)
-    .innerJoin(cantinas, eq(cantinas.id, produtos.cantinaId))
-    .where(eq(cantinas.slug, CANTINA_SLUG))
-    .orderBy(asc(produtos.nome));
+    .from(products)
+    .innerJoin(canteens, eq(canteens.id, products.canteenId))
+    .where(eq(canteens.slug, CANTEEN_SLUG))
+    .orderBy(asc(products.name));
 
-  return Response.json({ produtos: lista });
+  return Response.json({ products: list });
 }

@@ -1,141 +1,141 @@
 import { expect, test, type Page } from "@playwright/test";
-import { data, gravarNoBancoLocal, id, lerTabela, linha, rotulo } from "./local-db";
-import { filtroDeDia, rotuloDoFiltro } from "./day-filter";
+import { date, writeLocalDb, id, readTable, row, label } from "./local-db";
+import { dayFilter, filterLabel } from "./day-filter";
 
-/** Momento `dias` dias a partir de agora (negativo = no passado). */
-const momento = (dias: number) => new Date(Date.now() + dias * 86_400_000).toISOString();
+/** The moment `days` days from now (negative = in the past). */
+const moment = (days: number) => new Date(Date.now() + days * 86_400_000).toISOString();
 
-/** Pedido entregue criado no próprio dia de venda, como se tivesse sido vendido lá. */
-const pedido = (n: number, diaId: string, clienteId: string, diasAtras: number) => ({
-  ...linha.pedido(n, diaId, clienteId, "entregue"),
-  criadoEm: momento(-diasAtras),
+/** Delivered order created on the sale day itself, as if it had been sold there. */
+const order = (n: number, dayId: string, customerId: string, daysAgo: number) => ({
+  ...row.order(n, dayId, customerId, "entregue"),
+  createdAt: moment(-daysAgo),
 });
 
-async function abrirComDados(page: Page) {
-  await page.goto("/pendentes");
-  // O título só aparece depois da primeira leitura, então o banco local já existe.
+async function openWithData(page: Page) {
+  await page.goto("/pending");
+  // The title only appears after the first read, so the local database already exists.
   await expect(page.getByRole("heading", { name: "Pendentes", level: 1 })).toBeVisible();
 
-  await gravarNoBancoLocal(page, {
-    cantinas: [linha.cantina()],
-    produtos: [linha.produto(1, "Espeto de carne", 1000)],
-    diasDeVenda: [linha.dia(10, data(-17)), linha.dia(11, data(-3)), linha.dia(12, data(-10))],
-    clientes: [
-      linha.cliente(20, "Melina"),
-      linha.cliente(21, "Maju"),
-      linha.cliente(22, "Elizete"),
-      linha.cliente(23, "Charlene"),
-      linha.cliente(24, "Gustavo"),
+  await writeLocalDb(page, {
+    canteens: [row.canteen()],
+    products: [row.product(1, "Espeto de carne", 1000)],
+    saleDays: [row.day(10, date(-17)), row.day(11, date(-3)), row.day(12, date(-10))],
+    customers: [
+      row.customer(20, "Melina"),
+      row.customer(21, "Maju"),
+      row.customer(22, "Elizete"),
+      row.customer(23, "Charlene"),
+      row.customer(24, "Gustavo"),
     ],
-    pedidos: [
-      pedido(30, id(10), id(20), 17),
-      pedido(31, id(10), id(21), 17),
-      pedido(32, id(11), id(22), 3),
-      pedido(33, id(12), id(23), 10),
-      { ...linha.pedido(34, id(11), id(24), "recebido"), criadoEm: momento(-4) },
+    orders: [
+      order(30, id(10), id(20), 17),
+      order(31, id(10), id(21), 17),
+      order(32, id(11), id(22), 3),
+      order(33, id(12), id(23), 10),
+      { ...row.order(34, id(11), id(24), "recebido"), createdAt: moment(-4) },
     ],
-    itensPedido: [
-      linha.item(40, id(30), id(1), 3, 1000),
-      linha.item(41, id(31), id(1), 1, 1000),
-      linha.item(42, id(32), id(1), 2, 1200),
-      linha.item(43, id(33), id(1), 1, 1000),
-      linha.item(44, id(34), id(1), 2, 1000),
+    orderItems: [
+      row.item(40, id(30), id(1), 3, 1000),
+      row.item(41, id(31), id(1), 1, 1000),
+      row.item(42, id(32), id(1), 2, 1200),
+      row.item(43, id(33), id(1), 1, 1000),
+      row.item(44, id(34), id(1), 2, 1000),
     ],
-    // Charlene pagou na hora da venda: não conta em "Recebido agora".
-    pagamentos: [{ ...linha.pagamento(50, id(33), 1000), registradoEm: momento(-10) }],
+    // Charlene paid at the time of the sale: it does not count toward "Recebido agora".
+    payments: [{ ...row.payment(50, id(33), 1000), recordedAt: moment(-10) }],
   });
   await page.reload();
 }
 
-/** A coluna da faixa de números com este rótulo. */
-const numero = (page: Page, rotulo: string) =>
-  page.getByRole("region", { name: "Números" }).getByText(rotulo, { exact: true }).locator("..");
+/** The stat strip column with this label. */
+const stat = (page: Page, label: string) =>
+  page.getByRole("region", { name: "Números" }).getByText(label, { exact: true }).locator("..");
 
-test.describe("Pendentes no desktop", () => {
-  test("mostra os grupos e os números", async ({ page }) => {
-    await abrirComDados(page);
+test.describe("Pending on desktop", () => {
+  test("shows the groups and the stats", async ({ page }) => {
+    await openWithData(page);
 
-    await expect(numero(page, "Em aberto")).toContainText("R$ 64");
-    await expect(numero(page, "Pessoas devendo")).toContainText("3");
-    await expect(numero(page, "Há mais de 2 semanas")).toContainText("R$ 40 em aberto");
-    await expect(numero(page, "Recebido agora")).toContainText("R$ 0");
+    await expect(stat(page, "Em aberto")).toContainText("R$ 64");
+    await expect(stat(page, "Pessoas devendo")).toContainText("3");
+    await expect(stat(page, "Há mais de 2 semanas")).toContainText("R$ 40 em aberto");
+    await expect(stat(page, "Recebido agora")).toContainText("R$ 0");
 
-    const antigos = page.getByRole("region", { name: "Há mais de 2 semanas" });
-    await expect(antigos).toContainText("2 pessoas");
-    await expect(antigos.getByRole("group", { name: "Melina" })).toContainText(
-      `3× Espeto de carne · ${rotulo(data(-17))}`,
+    const staleRows = page.getByRole("region", { name: "Há mais de 2 semanas" });
+    await expect(staleRows).toContainText("2 pessoas");
+    await expect(staleRows.getByRole("group", { name: "Melina" })).toContainText(
+      `3× Espeto de carne · ${label(date(-17))}`,
     );
-    await expect(antigos.getByRole("group", { name: "Melina" })).toContainText("há 17 dias");
-    await expect(antigos.getByRole("group", { name: "Maju" })).toBeVisible();
+    await expect(staleRows.getByRole("group", { name: "Melina" })).toContainText("há 17 dias");
+    await expect(staleRows.getByRole("group", { name: "Maju" })).toBeVisible();
 
-    const recentes = page.getByRole("region", { name: "Recentes" });
-    await expect(recentes.getByRole("group")).toHaveCount(1);
-    await expect(recentes.getByRole("group", { name: "Elizete" })).toContainText("R$ 24");
+    const recent = page.getByRole("region", { name: "Recentes" });
+    await expect(recent.getByRole("group")).toHaveCount(1);
+    await expect(recent.getByRole("group", { name: "Elizete" })).toContainText("R$ 24");
 
-    // Reserva e pedido pago não aparecem.
+    // Reservations and paid orders do not appear.
     await expect(page.getByRole("group", { name: "Gustavo" })).toHaveCount(0);
     await expect(page.getByRole("group", { name: "Charlene" })).toHaveCount(0);
   });
 
-  test("Receber com Pix grava o pagamento e Desfazer estorna", async ({ page }) => {
-    await abrirComDados(page);
+  test("Receber with Pix records the payment and Desfazer refunds it", async ({ page }) => {
+    await openWithData(page);
     const melina = page.getByRole("group", { name: "Melina" });
 
     await melina.getByRole("button", { name: "Receber R$ 30 de Melina" }).click();
     await melina.getByRole("button", { name: "Pix", exact: true }).click();
 
     await expect(melina.getByText("Pago via Pix")).toBeVisible();
-    await expect(numero(page, "Em aberto")).toContainText("R$ 34");
-    await expect(numero(page, "Recebido agora")).toContainText("R$ 30");
-    const outbox = await lerTabela<{ tabela: string; payload: Record<string, unknown> }>(page, "outbox");
-    expect(outbox.filter((i) => i.tabela === "pagamentos").map((i) => i.payload)).toEqual([
-      expect.objectContaining({ pedidoId: id(30), forma: "pix", valorCentavos: 3000, estornadoEm: null }),
+    await expect(stat(page, "Em aberto")).toContainText("R$ 34");
+    await expect(stat(page, "Recebido agora")).toContainText("R$ 30");
+    const outbox = await readTable<{ table: string; payload: Record<string, unknown> }>(page, "outbox");
+    expect(outbox.filter((i) => i.table === "payments").map((i) => i.payload)).toEqual([
+      expect.objectContaining({ orderId: id(30), method: "pix", amountCents: 3000, refundedAt: null }),
     ]);
 
     await melina.getByRole("button", { name: "Desfazer" }).click();
 
     await expect(melina.getByRole("button", { name: "Receber R$ 30 de Melina" })).toBeVisible();
-    await expect(numero(page, "Em aberto")).toContainText("R$ 64");
-    const pagamentos = await lerTabela<{ pedidoId: string; estornadoEm: string | null }>(page, "pagamentos");
-    expect(pagamentos.find((p) => p.pedidoId === id(30))?.estornadoEm).toEqual(expect.any(String));
+    await expect(stat(page, "Em aberto")).toContainText("R$ 64");
+    const payments = await readTable<{ orderId: string; refundedAt: string | null }>(page, "payments");
+    expect(payments.find((p) => p.orderId === id(30))?.refundedAt).toEqual(expect.any(String));
   });
 
-  test("filtra por dia e busca por pessoa", async ({ page }) => {
-    await abrirComDados(page);
+  test("filters by day and searches by person", async ({ page }) => {
+    await openWithData(page);
 
     await page.getByRole("searchbox", { name: "Buscar pessoa" }).fill("eliz");
     await expect(page.getByRole("group", { name: "Elizete" })).toBeVisible();
     await expect(page.getByRole("group", { name: "Melina" })).toHaveCount(0);
-    await expect(numero(page, "Em aberto")).toContainText("R$ 24");
+    await expect(stat(page, "Em aberto")).toContainText("R$ 24");
 
     await page.getByRole("searchbox", { name: "Buscar pessoa" }).fill("");
-    await filtroDeDia(page).escolher(rotuloDoFiltro(data(-10)));
+    await dayFilter(page).select(filterLabel(date(-10)));
     await expect(page.getByText("Nada pendente aqui")).toBeVisible();
     await expect(page.getByText("Todo mundo deste período já pagou.")).toBeVisible();
   });
 
-  test("sem nenhum dia, números zerados e link para Vendas", async ({ page }) => {
-    await page.goto("/pendentes");
+  test("with no day, zeroed stats and a link to Sales", async ({ page }) => {
+    await page.goto("/pending");
 
-    await expect(page.getByRole("link", { name: "Criar o primeiro dia em Vendas" })).toHaveAttribute("href", "/vendas");
-    await expect(numero(page, "Em aberto")).toContainText("R$ 0");
-    await expect(numero(page, "Pessoas devendo")).toContainText("0");
-    await expect(filtroDeDia(page).gatilho).toHaveCount(0);
+    await expect(page.getByRole("link", { name: "Criar o primeiro dia em Vendas" })).toHaveAttribute("href", "/sales");
+    await expect(stat(page, "Em aberto")).toContainText("R$ 0");
+    await expect(stat(page, "Pessoas devendo")).toContainText("0");
+    await expect(dayFilter(page).trigger).toHaveCount(0);
   });
 });
 
-test.describe("Pendentes no celular", () => {
+test.describe("Pending on the phone", () => {
   test.use({ viewport: { width: 390, height: 844 } });
 
-  test("filtro de dia, resumo e receber em dinheiro", async ({ page }) => {
-    await abrirComDados(page);
+  test("day filter, summary and receiving in cash", async ({ page }) => {
+    await openWithData(page);
 
-    const resumo = page.getByRole("region", { name: "Resumo" });
-    await expect(resumo).toContainText("R$ 64");
-    await expect(resumo).toContainText("3 pessoas · 2 há mais de 2 semanas");
+    const summary = page.getByRole("region", { name: "Resumo" });
+    await expect(summary).toContainText("R$ 64");
+    await expect(summary).toContainText("3 pessoas · 2 há mais de 2 semanas");
 
-    await filtroDeDia(page).escolher(rotuloDoFiltro(data(-3)));
-    await expect(resumo).toContainText("R$ 24");
+    await dayFilter(page).select(filterLabel(date(-3)));
+    await expect(summary).toContainText("R$ 24");
     await expect(page.getByRole("group", { name: "Melina" })).toHaveCount(0);
 
     const elizete = page.getByRole("group", { name: "Elizete" });
@@ -143,7 +143,7 @@ test.describe("Pendentes no celular", () => {
     await elizete.getByRole("button", { name: "Dinheiro" }).click();
 
     await expect(elizete.getByText("Pago em dinheiro")).toBeVisible();
-    await expect(resumo).toContainText("R$ 0");
-    await expect(resumo).toContainText("R$ 24");
+    await expect(summary).toContainText("R$ 0");
+    await expect(summary).toContainText("R$ 24");
   });
 });

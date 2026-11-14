@@ -1,10 +1,10 @@
 import { plural } from "@/lib/format";
-import { DIAS_PENDENTE_ANTIGO } from "@/lib/dashboard";
+import { OLD_PENDING_DAYS } from "@/lib/dashboard";
 
-export function Idade({ dias }: { dias: number }) {
+export function Age({ days }: { days: number }) {
   return (
-    <span className={`text-[11px] ${dias >= DIAS_PENDENTE_ANTIGO ? "text-warn" : "text-muted-foreground"}`}>
-      {dias === 0 ? "hoje" : `há ${plural(dias, "dia", "dias")}`}
+    <span className={`text-[11px] ${days >= OLD_PENDING_DAYS ? "text-warn" : "text-muted-foreground"}`}>
+      {days === 0 ? "hoje" : `há ${plural(days, "dia", "dias")}`}
     </span>
   );
 }

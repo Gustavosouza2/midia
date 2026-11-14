@@ -4,9 +4,9 @@ import * as React from "react";
 import { cn } from "cn";
 import { Tabs as TabsPrimitive } from "radix-ui";
 
-// Abas do DESIGN.md (filtro e visão dos Pedidos do dia). Celular: chips com rolagem horizontal.
-// Tablet e desktop: grupo segmentado com fundo `muted`, aba ativa branca com sombra. As abas só
-// filtram a tela, então normalmente não há TabsContent.
+// DESIGN.md tabs (filter and view of the day's orders). Phone: horizontally scrolling chips.
+// Tablet and desktop: segmented group with a `muted` background, active tab white with a shadow. The tabs only
+// filter the screen, so there is usually no TabsContent.
 
 function Tabs({ className, ...props }: React.ComponentProps<typeof TabsPrimitive.Root>) {
   return <TabsPrimitive.Root data-slot="tabs" className={cn("min-w-0", className)} {...props} />;

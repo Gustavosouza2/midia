@@ -1,15 +1,15 @@
-import { formatarBRL } from "@/lib/format";
-import type { PedidoDoDia } from "@/lib/sales";
+import { formatBRL } from "@/lib/format";
+import type { DayOrder } from "@/lib/sales";
 
-export function Valor({ pedido }: { pedido: PedidoDoDia }) {
-  const detalhe =
-    pedido.status === "pendente" && pedido.aberto < pedido.valor
-      ? `falta ${formatarBRL(pedido.aberto)}`
-      : pedido.precoUnitario !== null && `${formatarBRL(pedido.precoUnitario)} cada`;
+export function OrderAmount({ order }: { order: DayOrder }) {
+  const detail =
+    order.status === "pending" && order.due < order.amount
+      ? `falta ${formatBRL(order.due)}`
+      : order.unitPrice !== null && `${formatBRL(order.unitPrice)} cada`;
   return (
     <span className="flex flex-col items-end leading-[1.3]">
-      <span>{formatarBRL(pedido.valor)}</span>
-      {detalhe && <span className="text-[11px] text-muted-foreground">{detalhe}</span>}
+      <span>{formatBRL(order.amount)}</span>
+      {detail && <span className="text-[11px] text-muted-foreground">{detail}</span>}
     </span>
   );
 }

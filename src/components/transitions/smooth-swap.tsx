@@ -1,12 +1,12 @@
 import { ViewTransition, type ReactNode } from "react";
 
 /**
- * Cruza o conteúdo velho com o novo quando ele muda dentro de um startTransition
- * (trocar de dia ou de período). Mudanças comuns de estado não animam.
+ * Crossfades the old content with the new when it changes inside a startTransition
+ * (switching day or period). Ordinary state changes do not animate.
  */
-export function TrocaSuave({ children }: { children: ReactNode }) {
+export function SmoothSwap({ children }: { children: ReactNode }) {
   return (
-    <ViewTransition update="troca" default="none">
+    <ViewTransition update="swap" default="none">
       {children}
     </ViewTransition>
   );

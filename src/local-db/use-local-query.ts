@@ -1,22 +1,22 @@
 import { liveQuery } from "dexie";
 import { useEffect, useState } from "react";
-import { getLocalDb, type CantinaLocalDb } from "./index";
+import { getLocalDb, type CanteenLocalDb } from "./index";
 
 /**
- * Lê o banco local e se atualiza sozinho quando as tabelas lidas mudam.
- * `consulta` precisa ser estável (declarada fora do componente).
- * Devolve undefined até a primeira leitura terminar.
+ * Reads the local database and refreshes itself when the tables it read change.
+ * `query` must be stable (declared outside the component).
+ * Returns undefined until the first read finishes.
  */
-export function useLeituraLocal<T>(consulta: (db: CantinaLocalDb) => Promise<T>): T | undefined {
-  const [valor, setValor] = useState<T>();
+export function useLocalQuery<T>(query: (db: CanteenLocalDb) => Promise<T>): T | undefined {
+  const [value, setValue] = useState<T>();
 
   useEffect(() => {
-    const assinatura = liveQuery(() => consulta(getLocalDb())).subscribe({
-      next: setValor,
-      error: (erro) => console.error("Falha ao ler o banco local", erro),
+    const subscription = liveQuery(() => query(getLocalDb())).subscribe({
+      next: setValue,
+      error: (error) => console.error("Failed to read the local database", error),
     });
-    return () => assinatura.unsubscribe();
-  }, [consulta]);
+    return () => subscription.unsubscribe();
+  }, [query]);
 
-  return valor;
+  return value;
 }

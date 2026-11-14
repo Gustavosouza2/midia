@@ -1,2 +1,2 @@
-/** v1: uma cantina só. O slug vem do ambiente, com "midia" como padrão. */
-export const CANTINA_SLUG = process.env.CANTINA_SLUG ?? "midia";
+/** v1: a single canteen. The slug comes from the environment, with "midia" as the default. */
+export const CANTEEN_SLUG = process.env.CANTEEN_SLUG ?? "midia";

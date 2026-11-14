@@ -6,9 +6,9 @@ const eslintConfig = defineConfig([
   ...nextVitals,
   ...nextTs,
   {
-    // Um componente por arquivo. Os do shadcn (ui/) agrupam as partes (Card, CardHeader…) por convenção.
+    // One component per file. The shadcn ones (ui/) group their parts (Card, CardHeader…) by convention.
     files: ["src/**/*.tsx"],
-    ignores: ["src/componentes/ui/**"],
+    ignores: ["src/components/ui/**"],
     rules: { "react/no-multi-comp": ["error", { ignoreStateless: false }] },
   },
   // Override default ignores of eslint-config-next.

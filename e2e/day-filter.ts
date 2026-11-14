@@ -1,23 +1,23 @@
 import type { Page } from "@playwright/test";
-import { rotuloComSemana } from "../src/lib/format";
+import { weekdayDate } from "../src/lib/format";
 
-/** "AAAA-MM-DD" → "Dom, 15 nov", como no filtro de dia. */
-export const rotuloDoFiltro = rotuloComSemana;
+/** "YYYY-MM-DD" → "Dom, 15 nov", as in the day filter. */
+export const filterLabel = weekdayDate;
 
-/** O filtro de dia ‹ [dia ▾] › da tela. `rotulo` é o nome do grupo: "Período" no Painel, "Dia de venda" nas outras. */
-export function filtroDeDia(page: Page, rotulo: "Período" | "Dia de venda" = "Dia de venda") {
-  const grupo = page.getByRole("group", { name: rotulo, exact: true });
-  const lista = page.getByRole("dialog", { name: "Escolher dia" });
-  const gatilho = grupo.locator('[aria-haspopup="dialog"]');
+/** The screen's day filter ‹ [day ▾] ›. `label` is the group name: "Período" on the Dashboard, "Dia de venda" on the others. */
+export function dayFilter(page: Page, label: "Período" | "Dia de venda" = "Dia de venda") {
+  const group = page.getByRole("group", { name: label, exact: true });
+  const list = page.getByRole("dialog", { name: "Escolher dia" });
+  const trigger = group.locator('[aria-haspopup="dialog"]');
   return {
-    gatilho,
-    anterior: grupo.getByRole("button", { name: "Dia anterior" }),
-    seguinte: grupo.getByRole("button", { name: "Dia seguinte" }),
-    lista,
-    /** Abre a lista e escolhe o item que começa com `texto` ("Todos os dias" ou "Dom, 15 nov"). */
-    async escolher(texto: string) {
-      await gatilho.click();
-      await lista.getByRole("button", { name: new RegExp(`^${texto}`) }).click();
+    trigger,
+    previous: group.getByRole("button", { name: "Dia anterior" }),
+    next: group.getByRole("button", { name: "Dia seguinte" }),
+    list,
+    /** Opens the list and picks the item that starts with `text` ("Todos os dias" or "Dom, 15 nov"). */
+    async select(text: string) {
+      await trigger.click();
+      await list.getByRole("button", { name: new RegExp(`^${text}`) }).click();
     },
   };
 }

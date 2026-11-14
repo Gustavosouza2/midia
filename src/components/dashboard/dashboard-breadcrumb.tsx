@@ -1,18 +1,18 @@
 import { Plus } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { IconePainel } from "../icons/dashboard-icon";
-import { Migalha } from "../breadcrumb";
+import { DashboardIcon } from "../icons/dashboard-icon";
+import { Breadcrumb } from "../breadcrumb";
 
-export function MigalhaDoPainel() {
+export function DashboardBreadcrumb() {
   return (
-    <Migalha Icone={IconePainel} titulo="Painel">
+    <Breadcrumb Icon={DashboardIcon} title="Painel">
       <Button asChild>
-        <Link transitionTypes={["tela"]} href="/vendas">
+        <Link transitionTypes={["screen"]} href="/sales">
           <Plus className="size-3.5" />
           Nova venda
         </Link>
       </Button>
-    </Migalha>
+    </Breadcrumb>
   );
 }

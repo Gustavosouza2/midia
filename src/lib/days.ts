@@ -1,52 +1,52 @@
-import type { DiaDeVenda } from "@/local-db";
-import { mesPorExtenso } from "./format";
+import type { SaleDay } from "@/local-db";
+import { longMonth } from "./format";
 
-/** Regras do filtro de dia (DESIGN.md, "Dias de venda"). Datas sempre "AAAA-MM-DD". */
+/** Day filter rules (DESIGN.md, "Sale days"). Dates are always "YYYY-MM-DD". */
 
-/** Dias não removidos, do mais novo para o mais antigo: a ordem da lista de dias. */
-export function diasAtivos(dias: DiaDeVenda[]): DiaDeVenda[] {
-  return dias.filter((d) => !d.canceladoEm).sort((a, b) => b.data.localeCompare(a.data));
+/** Days not removed, newest first: the order of the day list. */
+export function activeDays(days: SaleDay[]): SaleDay[] {
+  return days.filter((d) => !d.canceledAt).sort((a, b) => b.date.localeCompare(a.date));
 }
 
-/** O primeiro dia com data de hoje ou depois. `dias` em ordem de diasAtivos(). */
-export function proximoDia(dias: DiaDeVenda[], hoje: string): DiaDeVenda | null {
-  return dias.findLast((d) => d.data >= hoje) ?? null;
+/** The first day dated today or later. `days` in activeDays() order. */
+export function upcomingDay(days: SaleDay[], today: string): SaleDay | null {
+  return days.findLast((d) => d.date >= today) ?? null;
 }
 
-/** Dia aberto ao entrar na tela: hoje, senão o próximo dia, senão o mais recente. */
-export function diaInicial(dias: DiaDeVenda[], hoje: string): DiaDeVenda | null {
-  return proximoDia(dias, hoje) ?? dias[0] ?? null;
+/** Day opened when entering the screen: today, else the upcoming day, else the most recent. */
+export function initialDay(days: SaleDay[], today: string): SaleDay | null {
+  return upcomingDay(days, today) ?? days[0] ?? null;
 }
 
-/** Selo ao lado da data: "hoje" no dia de hoje, "próximo" no próximo dia quando ele ainda não chegou. */
-export function marcaDoDia(dia: DiaDeVenda, dias: DiaDeVenda[], hoje: string): "hoje" | "próximo" | null {
-  if (dia.data === hoje) return "hoje";
-  return dia.id === proximoDia(dias, hoje)?.id ? "próximo" : null;
+/** Badge next to the date: "hoje" on today's day, "próximo" on the upcoming day when it has not arrived yet. */
+export function dayTag(day: SaleDay, days: SaleDay[], today: string): "hoje" | "próximo" | null {
+  if (day.date === today) return "hoje";
+  return day.id === upcomingDay(days, today)?.id ? "próximo" : null;
 }
 
-/** Os dias das setas ‹ e ›: o anterior (mais antigo) e o seguinte (mais novo). `dias` em ordem de diasAtivos(). */
-export function vizinhos(dias: DiaDeVenda[], diaId: string): { anterior: DiaDeVenda | null; seguinte: DiaDeVenda | null } {
-  const i = dias.findIndex((d) => d.id === diaId);
-  if (i === -1) return { anterior: null, seguinte: null };
-  return { anterior: dias[i + 1] ?? null, seguinte: dias[i - 1] ?? null };
+/** The days behind the ‹ and › arrows: the previous (older) and the next (newer). `days` in activeDays() order. */
+export function neighbors(days: SaleDay[], dayId: string): { previous: SaleDay | null; next: SaleDay | null } {
+  const i = days.findIndex((d) => d.id === dayId);
+  if (i === -1) return { previous: null, next: null };
+  return { previous: days[i + 1] ?? null, next: days[i - 1] ?? null };
 }
 
-/** Data sugerida para um dia novo: o próximo domingo sem dia (hoje, se for domingo e estiver livre). */
-export function dataDoNovoDia(dias: DiaDeVenda[], hoje: string): string {
-  const ocupadas = new Set(dias.map((d) => d.data));
-  const [ano, mes, dia] = hoje.split("-").map(Number);
-  const data = new Date(Date.UTC(ano, mes - 1, dia));
-  data.setUTCDate(data.getUTCDate() + ((7 - data.getUTCDay()) % 7));
-  while (ocupadas.has(data.toISOString().slice(0, 10))) data.setUTCDate(data.getUTCDate() + 7);
-  return data.toISOString().slice(0, 10);
+/** Suggested date for a new day: the next Sunday without a day (today, if it is Sunday and free). */
+export function newDayDate(days: SaleDay[], today: string): string {
+  const taken = new Set(days.map((d) => d.date));
+  const [year, month, day] = today.split("-").map(Number);
+  const date = new Date(Date.UTC(year, month - 1, day));
+  date.setUTCDate(date.getUTCDate() + ((7 - date.getUTCDay()) % 7));
+  while (taken.has(date.toISOString().slice(0, 10))) date.setUTCDate(date.getUTCDate() + 7);
+  return date.toISOString().slice(0, 10);
 }
 
-/** [["Novembro de 2026", [...]], ["Outubro de 2026", [...]]], mantendo a ordem dos dias. */
-export function agruparPorMes(dias: DiaDeVenda[]): [string, DiaDeVenda[]][] {
-  const grupos = new Map<string, DiaDeVenda[]>();
-  for (const dia of dias) {
-    const mes = mesPorExtenso(dia.data);
-    grupos.set(mes, [...(grupos.get(mes) ?? []), dia]);
+/** [["Novembro de 2026", [...]], ["Outubro de 2026", [...]]], keeping the order of the days. */
+export function groupByMonth(days: SaleDay[]): [string, SaleDay[]][] {
+  const groups = new Map<string, SaleDay[]>();
+  for (const day of days) {
+    const month = longMonth(day.date);
+    groups.set(month, [...(groups.get(month) ?? []), day]);
   }
-  return [...grupos];
+  return [...groups];
 }

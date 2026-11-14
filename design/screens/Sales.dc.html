@@ -101,16 +101,16 @@ input::placeholder{color:var(--muted)}
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="9" rx="1.5"></rect><rect x="14" y="3" width="7" height="5" rx="1.5"></rect><rect x="14" y="12" width="7" height="9" rx="1.5"></rect><rect x="3" y="16" width="7" height="5" rx="1.5"></rect></svg>
         Painel
       </a>
-      <a class="nav-link" href="Vendas.dc.html" aria-current="page">
+      <a class="nav-link" href="Sales.dc.html" aria-current="page">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 5h2l2.2 10.2a2 2 0 0 0 2 1.6h7.6a2 2 0 0 0 2-1.6L20 8H6"></path><circle cx="10" cy="20" r="1"></circle><circle cx="17" cy="20" r="1"></circle></svg>
         Vendas
       </a>
-      <a class="nav-link" href="Pendentes.dc.html">
+      <a class="nav-link" href="Pending.dc.html">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 2"></path></svg>
         Pendentes
         <span class="nav-count">{{pendentesTotal}}</span>
       </a>
-      <a class="nav-link" href="Cardapio.dc.html">
+      <a class="nav-link" href="Menu.dc.html">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 2v20"></path><path d="M4 2v6a3 3 0 0 0 6 0V2"></path><path d="M17 2c-1.7 0-3 2-3 5s1.3 4 3 4v11"></path></svg>
         Cardápio
       </a>
@@ -145,7 +145,7 @@ input::placeholder{color:var(--muted)}
     <section style="display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 16px">
       <div style="display: flex; flex-direction: column; gap: 4px">
         <h1 style="margin: 0; font-size: 26px; font-weight: 600; letter-spacing: -0.02em; line-height: 1.2">Vendas</h1>
-        <span style="font-size: 12px; color: var(--muted)">{{diaLongo}} · <a href="Cardapio.dc.html" style="color: var(--accent); text-underline-offset: 3px">preços no Cardápio</a></span>
+        <span style="font-size: 12px; color: var(--muted)">{{diaLongo}} · <a href="Menu.dc.html" style="color: var(--accent); text-underline-offset: 3px">preços no Cardápio</a></span>
       </div>
       <div class="tabs" role="tablist" aria-label="Dia de venda">
         <sc-for list="{{abas}}" as="a" hint-placeholder-count="3">

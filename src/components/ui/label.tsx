@@ -4,7 +4,7 @@ import * as React from "react";
 import { cn } from "cn";
 import { Label as LabelPrimitive } from "radix-ui";
 
-// Rótulo de campo do DESIGN.md: 11px na cor `muted-foreground`.
+// DESIGN.md field label: 11px in the `muted-foreground` color.
 function Label({ className, ...props }: React.ComponentProps<typeof LabelPrimitive.Root>) {
   return (
     <LabelPrimitive.Root

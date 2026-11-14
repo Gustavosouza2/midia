@@ -1,92 +1,92 @@
 import type { Page } from "@playwright/test";
 
-/** Data local "AAAA-MM-DD" deslocada em `dias` a partir de hoje. */
-export function data(dias: number): string {
+/** Local date "YYYY-MM-DD" shifted by `days` from today. */
+export function date(days: number): string {
   const d = new Date();
-  d.setDate(d.getDate() + dias);
+  d.setDate(d.getDate() + days);
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
-const MESES = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"];
+const MONTHS = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"];
 
-/** "2026-11-01" → "01 nov", como nas abas de dia. */
-export const rotulo = (quando: string) => `${quando.slice(8)} ${MESES[Number(quando.slice(5, 7)) - 1]}`;
+/** "2026-11-01" → "01 nov", as in the day tabs. */
+export const label = (when: string) => `${when.slice(8)} ${MONTHS[Number(when.slice(5, 7)) - 1]}`;
 
-/** UUID fixo a partir de um número, para os dados de teste. */
+/** Fixed UUID from a number, for the test data. */
 export const id = (n: number) => `00000000-0000-4000-8000-${String(n).padStart(12, "0")}`;
 
-const CANTINA_ID = "c0000000-0000-4000-8000-000000000001";
-const base = () => ({ cantinaId: CANTINA_ID, atualizadoEm: new Date().toISOString(), seq: 1 });
+const CANTEEN_ID = "c0000000-0000-4000-8000-000000000001";
+const base = () => ({ canteenId: CANTEEN_ID, updatedAt: new Date().toISOString(), seq: 1 });
 
-/** Construtores de linhas do banco local, com os campos obrigatórios preenchidos. */
-export const linha = {
-  cantina: () => ({ id: CANTINA_ID, nome: "Mídia", slug: "midia", atualizadoEm: new Date().toISOString(), seq: 1 }),
-  produto: (n: number, nome: string, precoCentavos: number, ativo = true) => ({
-    ...base(), id: id(n), nome, precoCentavos, ativo,
+/** Local database row builders, with the required fields filled in. */
+export const row = {
+  canteen: () => ({ id: CANTEEN_ID, name: "Mídia", slug: "midia", updatedAt: new Date().toISOString(), seq: 1 }),
+  product: (n: number, name: string, priceCents: number, active = true) => ({
+    ...base(), id: id(n), name, priceCents, active,
   }),
-  dia: (n: number, quando: string, nome: string | null = null) => ({
-    ...base(), id: id(n), data: quando, nome, fechadoEm: null, canceladoEm: null,
+  day: (n: number, when: string, name: string | null = null) => ({
+    ...base(), id: id(n), date: when, name, closedAt: null, canceledAt: null,
   }),
-  precoDoDia: (
-    n: number, diaId: string, produtoId: string, precoCentavos: number, ativo = true, quantidade: number | null = null,
+  dayMenuItem: (
+    n: number, dayId: string, productId: string, priceCents: number, active = true, quantity: number | null = null,
   ) => ({
-    ...base(), id: id(n), diaId, produtoId, precoCentavos, ativo, quantidade,
+    ...base(), id: id(n), dayId, productId, priceCents, active, quantity,
   }),
-  cliente: (n: number, nome: string) => ({ ...base(), id: id(n), nome, telefone: null }),
-  pedido: (n: number, diaId: string, clienteId: string | null, status: "recebido" | "entregue") => ({
-    ...base(), id: id(n), diaId, clienteId, origem: "balcao", status, vendedorId: null,
-    criadoEm: new Date().toISOString(), entregueEm: status === "entregue" ? new Date().toISOString() : null,
+  customer: (n: number, name: string) => ({ ...base(), id: id(n), name, phone: null }),
+  order: (n: number, dayId: string, customerId: string | null, status: "recebido" | "entregue") => ({
+    ...base(), id: id(n), dayId, customerId, origin: "balcao", status, sellerId: null,
+    createdAt: new Date().toISOString(), deliveredAt: status === "entregue" ? new Date().toISOString() : null,
   }),
-  item: (n: number, pedidoId: string, produtoId: string, quantidade: number, precoUnitarioCentavos: number) => ({
-    ...base(), id: id(n), pedidoId, produtoId, quantidade, precoUnitarioCentavos, canceladoEm: null,
+  item: (n: number, orderId: string, productId: string, quantity: number, unitPriceCents: number) => ({
+    ...base(), id: id(n), orderId, productId, quantity, unitPriceCents, canceledAt: null,
   }),
-  pagamento: (n: number, pedidoId: string, valorCentavos: number, forma: "pix" | "dinheiro" = "pix") => ({
-    ...base(), id: id(n), pedidoId, valorCentavos, forma, vendedorId: null,
-    registradoEm: new Date().toISOString(), estornadoEm: null,
+  payment: (n: number, orderId: string, amountCents: number, method: "pix" | "dinheiro" = "pix") => ({
+    ...base(), id: id(n), orderId, amountCents, method, sellerId: null,
+    recordedAt: new Date().toISOString(), refundedAt: null,
   }),
 };
 
-async function abrirBanco(page: Page) {
-  // O banco só existe depois que o app abriu uma vez (o Dexie cria as stores).
-  await page.waitForFunction(async () => (await indexedDB.databases()).some((d) => d.name === "cantina"));
+async function waitForLocalDb(page: Page) {
+  // The database only exists after the app has opened once (Dexie creates the stores).
+  await page.waitForFunction(async () => (await indexedDB.databases()).some((d) => d.name === "canteen"));
 }
 
-/** Grava linhas direto no IndexedDB do app (o banco "cantina" criado pelo Dexie). */
-export async function gravarNoBancoLocal(page: Page, linhas: Record<string, object[]>) {
-  await abrirBanco(page);
-  await page.evaluate(async (linhas) => {
-    const db = await new Promise<IDBDatabase>((ok, erro) => {
-      const pedido = indexedDB.open("cantina");
-      pedido.onsuccess = () => ok(pedido.result);
-      pedido.onerror = () => erro(pedido.error);
+/** Writes rows straight into the app's IndexedDB (the "canteen" database created by Dexie). */
+export async function writeLocalDb(page: Page, rows: Record<string, object[]>) {
+  await waitForLocalDb(page);
+  await page.evaluate(async (rows) => {
+    const db = await new Promise<IDBDatabase>((ok, error) => {
+      const order = indexedDB.open("canteen");
+      order.onsuccess = () => ok(order.result);
+      order.onerror = () => error(order.error);
     });
-    const tx = db.transaction(Object.keys(linhas), "readwrite");
-    for (const [tabela, registros] of Object.entries(linhas)) {
-      for (const registro of registros) tx.objectStore(tabela).put(registro);
+    const tx = db.transaction(Object.keys(rows), "readwrite");
+    for (const [table, records] of Object.entries(rows)) {
+      for (const record of records) tx.objectStore(table).put(record);
     }
-    await new Promise((ok, erro) => {
+    await new Promise((ok, error) => {
       tx.oncomplete = ok;
-      tx.onerror = () => erro(tx.error);
+      tx.onerror = () => error(tx.error);
     });
     db.close();
-  }, linhas);
+  }, rows);
 }
 
-/** Lê todas as linhas de uma tabela do IndexedDB do app. */
-export async function lerTabela<T = Record<string, unknown>>(page: Page, tabela: string): Promise<T[]> {
-  await abrirBanco(page);
-  return page.evaluate(async (tabela) => {
-    const db = await new Promise<IDBDatabase>((ok, erro) => {
-      const pedido = indexedDB.open("cantina");
-      pedido.onsuccess = () => ok(pedido.result);
-      pedido.onerror = () => erro(pedido.error);
+/** Reads every row of a table from the app's IndexedDB. */
+export async function readTable<T = Record<string, unknown>>(page: Page, table: string): Promise<T[]> {
+  await waitForLocalDb(page);
+  return page.evaluate(async (table) => {
+    const db = await new Promise<IDBDatabase>((ok, error) => {
+      const order = indexedDB.open("canteen");
+      order.onsuccess = () => ok(order.result);
+      order.onerror = () => error(order.error);
     });
-    const linhas = await new Promise<unknown[]>((ok, erro) => {
-      const pedido = db.transaction(tabela).objectStore(tabela).getAll();
-      pedido.onsuccess = () => ok(pedido.result);
-      pedido.onerror = () => erro(pedido.error);
+    const rows = await new Promise<unknown[]>((ok, error) => {
+      const order = db.transaction(table).objectStore(table).getAll();
+      order.onsuccess = () => ok(order.result);
+      order.onerror = () => error(order.error);
     });
     db.close();
-    return linhas;
-  }, tabela) as Promise<T[]>;
+    return rows;
+  }, table) as Promise<T[]>;
 }

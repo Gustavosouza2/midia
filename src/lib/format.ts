@@ -1,5 +1,5 @@
-const MESES_CURTOS = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"];
-const MESES = [
+const SHORT_MONTHS = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"];
+const MONTHS = [
   "janeiro",
   "fevereiro",
   "março",
@@ -13,8 +13,8 @@ const MESES = [
   "novembro",
   "dezembro",
 ];
-const SEMANA_CURTA = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
-const DIAS_DA_SEMANA = [
+const SHORT_WEEKDAYS = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
+const WEEKDAYS = [
   "Domingo",
   "Segunda-feira",
   "Terça-feira",
@@ -24,66 +24,66 @@ const DIAS_DA_SEMANA = [
   "Sábado",
 ];
 
-const inteiro = new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 0 });
-const comCentavos = new Intl.NumberFormat("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const wholeFormat = new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 0 });
+const withCents = new Intl.NumberFormat("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-export function formatarBRL(centavos: number): string {
-  const reais = centavos / 100;
-  return "R$ " + (centavos % 100 === 0 ? inteiro : comCentavos).format(reais);
+export function formatBRL(cents: number): string {
+  const reais = cents / 100;
+  return "R$ " + (cents % 100 === 0 ? wholeFormat : withCents).format(reais);
 }
 
-function partes(data: string) {
-  const [ano, mes, dia] = data.split("-").map(Number);
-  return { ano, mes, dia, semana: new Date(Date.UTC(ano, mes - 1, dia)).getUTCDay() };
+function parts(date: string) {
+  const [year, month, day] = date.split("-").map(Number);
+  return { year, month, day, weekday: new Date(Date.UTC(year, month - 1, day)).getUTCDay() };
 }
 
-export function rotuloDia(data: string): string {
-  const { mes, dia } = partes(data);
-  return String(dia).padStart(2, "0") + " " + MESES_CURTOS[mes - 1];
+export function shortDate(date: string): string {
+  const { month, day } = parts(date);
+  return String(day).padStart(2, "0") + " " + SHORT_MONTHS[month - 1];
 }
 
-/** "Dom, 15 nov": o rótulo do filtro de dia. */
-export function rotuloComSemana(data: string): string {
-  const { mes, dia, semana } = partes(data);
-  return `${SEMANA_CURTA[semana]}, ${dia} ${MESES_CURTOS[mes - 1]}`;
+/** "Dom, 15 nov": the day filter label. */
+export function weekdayDate(date: string): string {
+  const { month, day, weekday } = parts(date);
+  return `${SHORT_WEEKDAYS[weekday]}, ${day} ${SHORT_MONTHS[month - 1]}`;
 }
 
-export function diaPorExtenso(data: string): string {
-  const { mes, dia, semana } = partes(data);
-  return `${DIAS_DA_SEMANA[semana]}, ${dia} de ${MESES[mes - 1]}`;
+export function longDate(date: string): string {
+  const { month, day, weekday } = parts(date);
+  return `${WEEKDAYS[weekday]}, ${day} de ${MONTHS[month - 1]}`;
 }
 
-export function mesPorExtenso(data: string): string {
-  const { ano, mes } = partes(data);
-  const nome = MESES[mes - 1];
-  return `${nome[0].toUpperCase()}${nome.slice(1)} de ${ano}`;
+export function longMonth(date: string): string {
+  const { year, month } = parts(date);
+  const name = MONTHS[month - 1];
+  return `${name[0].toUpperCase()}${name.slice(1)} de ${year}`;
 }
 
-export function seloDia(data: string): { dia: string; mes: string } {
-  const { mes, dia } = partes(data);
-  return { dia: String(dia), mes: MESES_CURTOS[mes - 1] };
+export function badgeDate(date: string): { day: string; month: string } {
+  const { month, day } = parts(date);
+  return { day: String(day), month: SHORT_MONTHS[month - 1] };
 }
 
-export function diasEntre(de: string, ate: string): number {
-  const a = partes(de);
-  const b = partes(ate);
-  return Math.round((Date.UTC(b.ano, b.mes - 1, b.dia) - Date.UTC(a.ano, a.mes - 1, a.dia)) / 86_400_000);
+export function daysBetween(from: string, to: string): number {
+  const a = parts(from);
+  const b = parts(to);
+  return Math.round((Date.UTC(b.year, b.month - 1, b.day) - Date.UTC(a.year, a.month - 1, a.day)) / 86_400_000);
 }
 
-export function hojeLocal(agora = new Date()): string {
-  const mes = String(agora.getMonth() + 1).padStart(2, "0");
-  const dia = String(agora.getDate()).padStart(2, "0");
-  return `${agora.getFullYear()}-${mes}-${dia}`;
+export function localToday(now = new Date()): string {
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  const day = String(now.getDate()).padStart(2, "0");
+  return `${now.getFullYear()}-${month}-${day}`;
 }
 
-export function dataLocal(iso: string): string {
-  return hojeLocal(new Date(iso));
+export function localDate(iso: string): string {
+  return localToday(new Date(iso));
 }
 
-export function iniciais(nome: string): string {
-  return nome.trim().slice(0, 2).toUpperCase() || "?";
+export function initials(name: string): string {
+  return name.trim().slice(0, 2).toUpperCase() || "?";
 }
 
-export function plural(n: number, singular: string, varios: string): string {
-  return `${n} ${n === 1 ? singular : varios}`;
+export function plural(n: number, singular: string, many: string): string {
+  return `${n} ${n === 1 ? singular : many}`;
 }

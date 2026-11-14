@@ -1,13 +1,13 @@
 import type { Metadata } from "next";
-import { TransicaoDeTela } from "@/components/transitions/screen-transition";
-import { Cardapio } from "@/components/menu/menu";
+import { ScreenTransition } from "@/components/transitions/screen-transition";
+import { Menu } from "@/components/menu/menu";
 
 export const metadata: Metadata = { title: "Cardápio · Cantina da Mídia" };
 
-export default function CardapioPage() {
+export default function MenuPage() {
   return (
-    <TransicaoDeTela>
-      <Cardapio />
-    </TransicaoDeTela>
+    <ScreenTransition>
+      <Menu />
+    </ScreenTransition>
   );
 }

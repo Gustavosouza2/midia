@@ -5,142 +5,142 @@ import { X } from "lucide-react";
 import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { getLocalDb, type CantinaLocalDb } from "@/local-db";
+import { getLocalDb, type CanteenLocalDb } from "@/local-db";
 import {
-  entregarReserva,
-  ErroDeEscrita,
-  estornarPagamento,
-  registrarPagamento,
-  type FormaPagamento,
+  deliverReservation,
+  WriteError,
+  refundPayment,
+  recordPayment,
+  type PaymentMethod,
 } from "@/local-db/writes";
-import { rotuloPago, type PedidoDoDia } from "@/lib/sales";
+import { paidLabel, type DayOrder } from "@/lib/sales";
 
 /**
- * Status e ações de um pedido (padrão de Pendentes):
- * - pendente: "Pendente" ou "Marcar pago" abre Pix · Dinheiro · × no lugar;
- * - pago: "Pago · Pix"; na tabela, tocar oferece "Desfazer"; no cartão e no quadro, "Desfazer" direto;
- * - reservado: "Reservado" e "Entregar" (o pagamento continua como estava).
- * `onde` muda só a forma: selos clicáveis na tabela, selo + botão no cartão, só o botão no quadro.
+ * Status and actions of an order (same pattern as Pending):
+ * - pending: "Pendente" or "Marcar pago" opens Pix · Dinheiro · × in its place;
+ * - paid: "Pago · Pix"; in the table, tapping offers "Desfazer"; on the card and the board, "Desfazer" directly;
+ * - reserved: "Reservado" and "Entregar" (the payment stays as it was).
+ * `placement` only changes the form: clickable badges in the table, badge + button on the card, just the button on the board.
  */
-export function AcoesDoPedido({ pedido, onde }: { pedido: PedidoDoDia; onde: "tabela" | "cartao" | "quadro" }) {
-  const [modo, setModo] = useState<"normal" | "receber" | "desfazer">("normal");
-  const [erro, setErro] = useState<string | null>(null);
-  const [salvando, setSalvando] = useState(false);
+export function OrderActions({ order, placement }: { order: DayOrder; placement: "table" | "card" | "board" }) {
+  const [mode, setMode] = useState<"normal" | "receive" | "undo">("normal");
+  const [error, setError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
 
-  async function executar(acao: (db: CantinaLocalDb) => Promise<unknown>) {
-    setSalvando(true);
-    setErro(null);
+  async function run(action: (db: CanteenLocalDb) => Promise<unknown>) {
+    setSaving(true);
+    setError(null);
     try {
-      await acao(getLocalDb());
-      setModo("normal");
+      await action(getLocalDb());
+      setMode("normal");
     } catch (e) {
-      setErro(e instanceof ErroDeEscrita ? e.message : "Não foi possível salvar.");
+      setError(e instanceof WriteError ? e.message : "Não foi possível salvar.");
     } finally {
-      setSalvando(false);
+      setSaving(false);
     }
   }
 
-  const receber = (forma: FormaPagamento) => executar((db) => registrarPagamento(db, pedido.id, forma));
-  const desfazer = () =>
-    executar(async (db) => {
-      for (const id of pedido.pagamentosAtivos) await estornarPagamento(db, id);
+  const receive = (method: PaymentMethod) => run((db) => recordPayment(db, order.id, method));
+  const undo = () =>
+    run(async (db) => {
+      for (const id of order.activePayments) await refundPayment(db, id);
     });
-  const entregar = () => executar((db) => entregarReserva(db, pedido.id));
+  const deliver = () => run((db) => deliverReservation(db, order.id));
 
-  const tabela = onde === "tabela";
-  const botao = tabela ? "h-[26px] rounded-md px-2.5 text-[11px]" : "h-[30px] px-3";
-  const selo = tabela ? "h-[26px] rounded-md px-2.5" : "h-[30px] rounded-lg px-2.5 text-xs";
-  const fechar = (
+  const table = placement === "table";
+  const buttonClass = table ? "h-[26px] rounded-md px-2.5 text-[11px]" : "h-[30px] px-3";
+  const badgeClass = table ? "h-[26px] rounded-md px-2.5" : "h-[30px] rounded-lg px-2.5 text-xs";
+  const closeButton = (
     <Button
       variant="ghost"
       aria-label="Cancelar"
-      disabled={salvando}
-      onClick={() => setModo("normal")}
-      className={cn(botao, "px-1.5")}
+      disabled={saving}
+      onClick={() => setMode("normal")}
+      className={cn(buttonClass, "px-1.5")}
     >
       <X className="size-3.5" />
     </Button>
   );
 
-  let conteudo;
-  if (pedido.status === "reservado") {
-    conteudo = (
+  let content;
+  if (order.status === "reserved") {
+    content = (
       <>
-        {onde !== "quadro" && (
-          <Badge variant="outline" className={cn(selo, "border-input bg-muted")}>
+        {placement !== "board" && (
+          <Badge variant="outline" className={cn(badgeClass, "border-input bg-muted")}>
             Reservado
           </Badge>
         )}
-        <Button variant={onde === "quadro" ? "outline" : "default"} disabled={salvando} onClick={entregar} className={botao}>
+        <Button variant={placement === "board" ? "outline" : "default"} disabled={saving} onClick={deliver} className={buttonClass}>
           Entregar
         </Button>
       </>
     );
-  } else if (modo === "receber") {
-    conteudo = (
+  } else if (mode === "receive") {
+    content = (
       <>
-        {(["pix", "dinheiro"] as const).map((forma) => (
-          <Button key={forma} disabled={salvando} onClick={() => receber(forma)} className={botao}>
-            {forma === "pix" ? "Pix" : "Dinheiro"}
+        {(["pix", "dinheiro"] as const).map((method) => (
+          <Button key={method} disabled={saving} onClick={() => receive(method)} className={buttonClass}>
+            {method === "pix" ? "Pix" : "Dinheiro"}
           </Button>
         ))}
-        {fechar}
+        {closeButton}
       </>
     );
-  } else if (modo === "desfazer") {
-    conteudo = (
+  } else if (mode === "undo") {
+    content = (
       <>
-        <Badge variant="ok" className={selo}>
-          {rotuloPago(pedido.formas)}
+        <Badge variant="ok" className={badgeClass}>
+          {paidLabel(order.methods)}
         </Badge>
-        <Button variant="outline" disabled={salvando} onClick={desfazer} className={botao}>
+        <Button variant="outline" disabled={saving} onClick={undo} className={buttonClass}>
           Desfazer
         </Button>
-        {fechar}
+        {closeButton}
       </>
     );
-  } else if (pedido.status === "pendente") {
-    conteudo = tabela ? (
-      <Badge asChild variant="warn" className={cn(selo, "cursor-pointer hover:brightness-95")}>
-        <button type="button" aria-label="Pendente. Tocar para marcar como pago" onClick={() => setModo("receber")}>
+  } else if (order.status === "pending") {
+    content = table ? (
+      <Badge asChild variant="warn" className={cn(badgeClass, "cursor-pointer hover:brightness-95")}>
+        <button type="button" aria-label="Pendente. Tocar para marcar como pago" onClick={() => setMode("receive")}>
           Pendente
         </button>
       </Badge>
     ) : (
       <>
-        {onde === "cartao" && (
-          <Badge variant="warn" className={selo}>
+        {placement === "card" && (
+          <Badge variant="warn" className={badgeClass}>
             Pendente
           </Badge>
         )}
         <Button
-          variant={onde === "quadro" ? "outline" : "default"}
-          onClick={() => setModo("receber")}
-          className={botao}
+          variant={placement === "board" ? "outline" : "default"}
+          onClick={() => setMode("receive")}
+          className={buttonClass}
         >
           Marcar pago
         </Button>
       </>
     );
   } else {
-    conteudo = tabela ? (
-      <Badge asChild variant="ok" className={cn(selo, "cursor-pointer hover:brightness-95")}>
+    content = table ? (
+      <Badge asChild variant="ok" className={cn(badgeClass, "cursor-pointer hover:brightness-95")}>
         <button
           type="button"
-          aria-label={`${rotuloPago(pedido.formas)}. Tocar para desfazer`}
-          onClick={() => setModo("desfazer")}
+          aria-label={`${paidLabel(order.methods)}. Tocar para desfazer`}
+          onClick={() => setMode("undo")}
         >
-          {rotuloPago(pedido.formas)}
+          {paidLabel(order.methods)}
         </button>
       </Badge>
     ) : (
       <>
-        {onde === "cartao" && (
-          <Badge variant="ok" className={selo}>
-            {rotuloPago(pedido.formas)}
+        {placement === "card" && (
+          <Badge variant="ok" className={badgeClass}>
+            {paidLabel(order.methods)}
           </Badge>
         )}
-        <Button variant="outline" disabled={salvando} onClick={desfazer} className={botao}>
+        <Button variant="outline" disabled={saving} onClick={undo} className={buttonClass}>
           Desfazer
         </Button>
       </>
@@ -150,16 +150,16 @@ export function AcoesDoPedido({ pedido, onde }: { pedido: PedidoDoDia; onde: "ta
   return (
     <div className="flex flex-col items-end gap-1">
       <div
-        key={`${pedido.status}-${modo}`}
+        key={`${order.status}-${mode}`}
         role="group"
-        aria-label={`Status de ${pedido.nome}`}
+        aria-label={`Status de ${order.name}`}
         className="flex flex-wrap items-center justify-end gap-1.5 animate-in duration-200 fade-in zoom-in-95"
       >
-        {conteudo}
+        {content}
       </div>
-      {erro && (
+      {error && (
         <p role="alert" className="text-[11px] text-warn">
-          {erro}
+          {error}
         </p>
       )}
     </div>

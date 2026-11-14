@@ -5,8 +5,8 @@ import { cn } from "cn";
 import { AlertDialog as AlertDialogPrimitive } from "radix-ui";
 import { Button } from "@/components/ui/button";
 
-// Confirmação (ex.: "Remover dia"): card de raio 12px com sombra flutuante, fundo escurecido
-// em `foreground` a 35%, botões de 34px alinhados à direita.
+// Confirmation (e.g. "Remover dia"): 12px radius card with a floating shadow, backdrop dimmed
+// with `foreground` at 35%, 34px buttons aligned right.
 
 function AlertDialog({ ...props }: React.ComponentProps<typeof AlertDialogPrimitive.Root>) {
   return <AlertDialogPrimitive.Root data-slot="alert-dialog" {...props} />;

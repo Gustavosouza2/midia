@@ -1,106 +1,106 @@
 import { describe, expect, it } from "vitest";
-import type { DiaDeVenda } from "@/local-db";
-import { agruparPorMes, dataDoNovoDia, diaInicial, diasAtivos, marcaDoDia, vizinhos } from "./days";
+import type { SaleDay } from "@/local-db";
+import { groupByMonth, newDayDate, initialDay, activeDays, dayTag, neighbors } from "./days";
 
-function dia(data: string, canceladoEm: string | null = null): DiaDeVenda {
+function day(date: string, canceledAt: string | null = null): SaleDay {
   return {
-    id: data,
-    cantinaId: "c",
-    data,
-    nome: null,
-    fechadoEm: null,
-    canceladoEm,
-    atualizadoEm: "2026-11-01T00:00:00.000Z",
+    id: date,
+    canteenId: "c",
+    date,
+    name: null,
+    closedAt: null,
+    canceledAt,
+    updatedAt: "2026-11-01T00:00:00.000Z",
     seq: 1,
   };
 }
 
-const ids = (dias: (DiaDeVenda | null)[]) => dias.map((d) => d?.data ?? null);
+const ids = (days: (SaleDay | null)[]) => days.map((d) => d?.date ?? null);
 
-describe("diasAtivos", () => {
-  it("tira os removidos e ordena do mais novo para o mais antigo", () => {
-    const dias = [dia("2026-10-18"), dia("2026-11-15"), dia("2026-11-08", "2026-11-02T10:00:00Z"), dia("2026-11-01")];
-    expect(ids(diasAtivos(dias))).toEqual(["2026-11-15", "2026-11-01", "2026-10-18"]);
+describe("activeDays", () => {
+  it("drops removed days and sorts newest first", () => {
+    const days = [day("2026-10-18"), day("2026-11-15"), day("2026-11-08", "2026-11-02T10:00:00Z"), day("2026-11-01")];
+    expect(ids(activeDays(days))).toEqual(["2026-11-15", "2026-11-01", "2026-10-18"]);
   });
 });
 
-describe("diaInicial", () => {
-  const dias = diasAtivos([dia("2026-11-01"), dia("2026-11-15"), dia("2026-11-22"), dia("2026-11-08")]);
+describe("initialDay", () => {
+  const days = activeDays([day("2026-11-01"), day("2026-11-15"), day("2026-11-22"), day("2026-11-08")]);
 
-  it("abre hoje quando hoje tem dia", () => {
-    expect(diaInicial(dias, "2026-11-08")?.data).toBe("2026-11-08");
+  it("opens today when today has a day", () => {
+    expect(initialDay(days, "2026-11-08")?.date).toBe("2026-11-08");
   });
 
-  it("senão abre o próximo dia", () => {
-    expect(diaInicial(dias, "2026-11-12")?.data).toBe("2026-11-15");
+  it("else opens the upcoming day", () => {
+    expect(initialDay(days, "2026-11-12")?.date).toBe("2026-11-15");
   });
 
-  it("senão abre o mais recente", () => {
-    expect(diaInicial(dias, "2026-12-01")?.data).toBe("2026-11-22");
+  it("else opens the most recent", () => {
+    expect(initialDay(days, "2026-12-01")?.date).toBe("2026-11-22");
   });
 
-  it("não abre nada quando não há dias", () => {
-    expect(diaInicial([], "2026-11-12")).toBeNull();
-  });
-});
-
-describe("dataDoNovoDia", () => {
-  it("sugere o próximo domingo", () => {
-    // 12/11/2026 é quinta-feira.
-    expect(dataDoNovoDia([], "2026-11-12")).toBe("2026-11-15");
-  });
-
-  it("sugere hoje quando hoje é domingo e está livre", () => {
-    expect(dataDoNovoDia([], "2026-11-15")).toBe("2026-11-15");
-  });
-
-  it("pula os domingos que já têm dia", () => {
-    expect(dataDoNovoDia([dia("2026-11-15"), dia("2026-11-22")], "2026-11-15")).toBe("2026-11-29");
-  });
-
-  it("atravessa a virada do ano", () => {
-    expect(dataDoNovoDia([], "2026-12-28")).toBe("2027-01-03");
+  it("opens nothing when there are no days", () => {
+    expect(initialDay([], "2026-11-12")).toBeNull();
   });
 });
 
-describe("marcaDoDia", () => {
-  const dias = diasAtivos([dia("2026-11-22"), dia("2026-11-15"), dia("2026-11-12"), dia("2026-11-08")]);
-  const marca = (data: string, hoje: string) => marcaDoDia(dias.find((d) => d.data === data)!, dias, hoje);
-
-  it("marca hoje quando o dia é hoje, e não marca próximo", () => {
-    expect(marca("2026-11-12", "2026-11-12")).toBe("hoje");
-    expect(marca("2026-11-15", "2026-11-12")).toBeNull();
+describe("newDayDate", () => {
+  it("suggests the next Sunday", () => {
+    // 12/11/2026 is a Thursday.
+    expect(newDayDate([], "2026-11-12")).toBe("2026-11-15");
   });
 
-  it("marca o próximo dia quando hoje não tem dia", () => {
-    expect(marca("2026-11-15", "2026-11-13")).toBe("próximo");
-    expect(marca("2026-11-22", "2026-11-13")).toBeNull();
-    expect(marca("2026-11-12", "2026-11-13")).toBeNull();
-  });
-});
-
-describe("vizinhos", () => {
-  const dias = diasAtivos([dia("2026-11-15"), dia("2026-11-08"), dia("2026-11-01")]);
-  const datas = (v: ReturnType<typeof vizinhos>) => [v.anterior?.data ?? null, v.seguinte?.data ?? null];
-
-  it("o anterior é o mais antigo e o seguinte o mais novo", () => {
-    expect(datas(vizinhos(dias, "2026-11-08"))).toEqual(["2026-11-01", "2026-11-15"]);
+  it("suggests today when today is Sunday and free", () => {
+    expect(newDayDate([], "2026-11-15")).toBe("2026-11-15");
   });
 
-  it("não tem vizinho depois das pontas", () => {
-    expect(datas(vizinhos(dias, "2026-11-15"))).toEqual(["2026-11-08", null]);
-    expect(datas(vizinhos(dias, "2026-11-01"))).toEqual([null, "2026-11-08"]);
+  it("skips Sundays that already have a day", () => {
+    expect(newDayDate([day("2026-11-15"), day("2026-11-22")], "2026-11-15")).toBe("2026-11-29");
   });
 
-  it("sem dia escolhido (Todos os dias), não tem vizinhos", () => {
-    expect(datas(vizinhos(dias, "todos"))).toEqual([null, null]);
+  it("crosses the year boundary", () => {
+    expect(newDayDate([], "2026-12-28")).toBe("2027-01-03");
   });
 });
 
-describe("agruparPorMes", () => {
-  it("agrupa por mês na ordem da lista", () => {
-    const dias = diasAtivos(["2026-11-08", "2026-10-25", "2026-10-11", "2026-09-27"].map((d) => dia(d)));
-    expect(agruparPorMes(dias).map(([mes, doMes]) => [mes, ids(doMes)])).toEqual([
+describe("dayTag", () => {
+  const days = activeDays([day("2026-11-22"), day("2026-11-15"), day("2026-11-12"), day("2026-11-08")]);
+  const tag = (date: string, today: string) => dayTag(days.find((d) => d.date === date)!, days, today);
+
+  it("tags today when the day is today, and does not tag upcoming", () => {
+    expect(tag("2026-11-12", "2026-11-12")).toBe("hoje");
+    expect(tag("2026-11-15", "2026-11-12")).toBeNull();
+  });
+
+  it("tags the upcoming day when today has no day", () => {
+    expect(tag("2026-11-15", "2026-11-13")).toBe("próximo");
+    expect(tag("2026-11-22", "2026-11-13")).toBeNull();
+    expect(tag("2026-11-12", "2026-11-13")).toBeNull();
+  });
+});
+
+describe("neighbors", () => {
+  const days = activeDays([day("2026-11-15"), day("2026-11-08"), day("2026-11-01")]);
+  const dates = (v: ReturnType<typeof neighbors>) => [v.previous?.date ?? null, v.next?.date ?? null];
+
+  it("previous is the older one and next the newer one", () => {
+    expect(dates(neighbors(days, "2026-11-08"))).toEqual(["2026-11-01", "2026-11-15"]);
+  });
+
+  it("has no neighbor past the ends", () => {
+    expect(dates(neighbors(days, "2026-11-15"))).toEqual(["2026-11-08", null]);
+    expect(dates(neighbors(days, "2026-11-01"))).toEqual([null, "2026-11-08"]);
+  });
+
+  it("with no selected day (Todos os dias), has no neighbors", () => {
+    expect(dates(neighbors(days, "all"))).toEqual([null, null]);
+  });
+});
+
+describe("groupByMonth", () => {
+  it("groups by month in list order", () => {
+    const days = activeDays(["2026-11-08", "2026-10-25", "2026-10-11", "2026-09-27"].map((d) => day(d)));
+    expect(groupByMonth(days).map(([month, inMonth]) => [month, ids(inMonth)])).toEqual([
       ["Novembro de 2026", ["2026-11-08"]],
       ["Outubro de 2026", ["2026-10-25", "2026-10-11"]],
       ["Setembro de 2026", ["2026-09-27"]],

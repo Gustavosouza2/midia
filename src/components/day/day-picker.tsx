@@ -1,39 +1,39 @@
 "use client";
 
 import { useState } from "react";
-import type { DiaDeVenda } from "@/local-db";
-import { FiltroDeDia } from "./day-filter";
-import { NovoDia } from "./new-day";
+import type { SaleDay } from "@/local-db";
+import { DayFilter } from "./day-filter";
+import { NewDay } from "./new-day";
 
 /**
- * Filtro de dia de Vendas e Cardápio, com o "+ Novo dia de venda" no rodapé da lista.
- * `dias` vem de diasAtivos(); a tela guarda o dia selecionado e começa por diaInicial().
+ * Day filter for Sales and Menu, with "+ Novo dia de venda" at the bottom of the list.
+ * `days` comes from activeDays(); the screen keeps the selected day and starts at initialDay().
  */
-export function SeletorDeDia({
-  dias,
-  hoje,
-  diaId,
-  aoEscolher,
+export function DayPicker({
+  days,
+  today,
+  dayId,
+  onSelect,
 }: {
-  dias: DiaDeVenda[];
-  hoje: string;
-  diaId: string;
-  aoEscolher: (diaId: string) => void;
+  days: SaleDay[];
+  today: string;
+  dayId: string;
+  onSelect: (dayId: string) => void;
 }) {
-  const [novoAberto, setNovoAberto] = useState(false);
+  const [newOpen, setNewOpen] = useState(false);
 
   return (
-    <NovoDia dias={dias} hoje={hoje} aberto={novoAberto} aoMudarAberto={setNovoAberto} aoEscolherDia={aoEscolher}>
+    <NewDay days={days} today={today} open={newOpen} onOpenChange={setNewOpen} onSelectDay={onSelect}>
       <div className="flex min-w-0">
-        <FiltroDeDia
-          dias={dias}
-          hoje={hoje}
-          valor={diaId}
-          aoEscolher={aoEscolher}
-          rotulo="Dia de venda"
-          aoNovoDia={() => setNovoAberto(true)}
+        <DayFilter
+          days={days}
+          today={today}
+          value={dayId}
+          onSelect={onSelect}
+          label="Dia de venda"
+          onNewDay={() => setNewOpen(true)}
         />
       </div>
-    </NovoDia>
+    </NewDay>
   );
 }

@@ -1,18 +1,18 @@
 import { useSyncExternalStore } from "react";
 
-/** Mesmo ponto de quebra do `tablet:` do Tailwind (globals.css). */
+/** Same breakpoint as Tailwind's `tablet:` (globals.css). */
 const TABLET = "(min-width: 35.0625rem)";
 
-function assinar(avisar: () => void) {
-  const consulta = window.matchMedia(TABLET);
-  consulta.addEventListener("change", avisar);
-  return () => consulta.removeEventListener("change", avisar);
+function subscribe(notify: () => void) {
+  const query = window.matchMedia(TABLET);
+  query.addEventListener("change", notify);
+  return () => query.removeEventListener("change", notify);
 }
 
-/** Tablet e desktop abrem popovers ancorados; o celular abre folhas de baixo para cima. */
+/** Tablet and desktop open anchored popovers; the phone opens bottom sheets. */
 export function useTablet(): boolean {
   return useSyncExternalStore(
-    assinar,
+    subscribe,
     () => window.matchMedia(TABLET).matches,
     () => false,
   );

@@ -4,51 +4,51 @@ import { Plus } from "lucide-react";
 import Link from "next/link";
 import { startTransition, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { lerBancoLocal } from "@/local-db/read-local-db";
-import { useLeituraLocal } from "@/local-db/use-local-query";
-import type { Periodo } from "@/lib/dashboard";
-import { montarPendentes } from "@/lib/pending";
-import { IconePendentes } from "../icons/pending-icon";
-import { Migalha } from "../breadcrumb";
-import { TrocaSuave } from "../transitions/smooth-swap";
-import { FiltroDePendentes } from "./pending-filter";
-import { GrupoDePendentes } from "./pending-group";
-import { NumerosDePendentes } from "./pending-stats";
-import { SemPendentes } from "./no-pending";
+import { readLocalDb } from "@/local-db/read-local-db";
+import { useLocalQuery } from "@/local-db/use-local-query";
+import type { Period } from "@/lib/dashboard";
+import { buildPending } from "@/lib/pending";
+import { PendingIcon } from "../icons/pending-icon";
+import { Breadcrumb } from "../breadcrumb";
+import { SmoothSwap } from "../transitions/smooth-swap";
+import { PendingFilter } from "./pending-filter";
+import { PendingGroup } from "./pending-group";
+import { PendingStats } from "./pending-stats";
+import { NoPending } from "./no-pending";
 
 /**
- * No celular, a ordem é abas → números → busca → grupos (protótipo Mobile-Pendentes);
- * no tablet e no desktop, abas e busca dividem uma linha acima dos números. A linha do
- * filtro vira `contents` no celular e os `order-*` arrumam os pedaços.
+ * On the phone, the order is tabs → stats → search → groups (Mobile-Pending prototype);
+ * on tablet and desktop, tabs and search share a row above the stats. The filter
+ * row becomes `contents` on the phone and the `order-*` classes arrange the pieces.
  */
-export function Pendentes() {
-  const dados = useLeituraLocal(lerBancoLocal);
-  const [periodoEscolhido, setPeriodoEscolhido] = useState<Periodo>("todos");
-  const [busca, setBusca] = useState("");
-  /** Pedido → pagamento recebido nesta sessão. Some ao recarregar a tela. */
-  const [recebidos, setRecebidos] = useState<ReadonlyMap<string, string>>(new Map());
-  const [escolhendo, setEscolhendo] = useState<string | null>(null);
+export function Pending() {
+  const data = useLocalQuery(readLocalDb);
+  const [selectedPeriod, setSelectedPeriod] = useState<Period>("all");
+  const [search, setSearch] = useState("");
+  /** Order → payment received in this session. Gone when the screen reloads. */
+  const [received, setReceived] = useState<ReadonlyMap<string, string>>(new Map());
+  const [choosing, setChoosing] = useState<string | null>(null);
 
-  const pendentes = useMemo(
-    () => dados && montarPendentes(dados, { periodo: periodoEscolhido, busca }, dados.hoje, recebidos),
-    [dados, periodoEscolhido, busca, recebidos],
+  const pending = useMemo(
+    () => data && buildPending(data, { period: selectedPeriod, search }, data.today, received),
+    [data, selectedPeriod, search, received],
   );
 
-  const migalha = (
-    <Migalha Icone={IconePendentes} titulo="Pendentes">
+  const breadcrumb = (
+    <Breadcrumb Icon={PendingIcon} title="Pendentes">
       <Button asChild>
-        <Link transitionTypes={["tela"]} href="/vendas">
+        <Link transitionTypes={["screen"]} href="/sales">
           <Plus className="size-3.5" />
           Nova venda
         </Link>
       </Button>
-    </Migalha>
+    </Breadcrumb>
   );
 
-  if (!dados || !pendentes) {
+  if (!data || !pending) {
     return (
       <>
-        {migalha}
+        {breadcrumb}
         <p className="text-[11px] text-muted-foreground" role="status">
           Carregando…
         </p>
@@ -56,11 +56,11 @@ export function Pendentes() {
     );
   }
 
-  const semDias = pendentes.dias.length === 0;
+  const noDays = pending.days.length === 0;
 
   return (
     <>
-      {migalha}
+      {breadcrumb}
       <section className="flex flex-col gap-1">
         <h1 className="text-lg leading-[1.2] font-semibold tracking-[-0.02em] tablet:text-[26px]">Pendentes</h1>
         <p className="text-xs text-muted-foreground">
@@ -68,56 +68,56 @@ export function Pendentes() {
         </p>
       </section>
 
-      {!semDias && (
-        <FiltroDePendentes
-          dias={pendentes.dias}
-          hoje={dados.hoje}
-          periodo={pendentes.periodo}
-          aoEscolher={(periodo) =>
+      {!noDays && (
+        <PendingFilter
+          days={pending.days}
+          today={data.today}
+          period={pending.period}
+          onSelect={(period) =>
             startTransition(() => {
-              setPeriodoEscolhido(periodo);
-              setEscolhendo(null);
+              setSelectedPeriod(period);
+              setChoosing(null);
             })
           }
-          busca={busca}
-          aoBuscar={setBusca}
+          search={search}
+          onSearch={setSearch}
         />
       )}
 
-      <TrocaSuave>
-        <NumerosDePendentes numeros={pendentes.numeros} />
+      <SmoothSwap>
+        <PendingStats stats={pending.stats} />
 
         <div className="order-4 flex flex-col gap-4 tablet:gap-5">
-          {semDias ? (
-            <SemPendentes titulo="Nenhum dia de venda ainda">
+          {noDays ? (
+            <NoPending title="Nenhum dia de venda ainda">
               <Button asChild variant="outline">
-                <Link transitionTypes={["tela"]} href="/vendas">
+                <Link transitionTypes={["screen"]} href="/sales">
                   Criar o primeiro dia em Vendas
                 </Link>
               </Button>
-            </SemPendentes>
-          ) : pendentes.grupos.length === 0 ? (
-            <SemPendentes titulo={busca.trim() ? "Ninguém encontrado" : "Nada pendente aqui"}>
+            </NoPending>
+          ) : pending.groups.length === 0 ? (
+            <NoPending title={search.trim() ? "Ninguém encontrado" : "Nada pendente aqui"}>
               <span className="text-[11px] text-muted-foreground">
-                {busca.trim() ? "Nenhum pendente com esse nome neste período." : "Todo mundo deste período já pagou."}
+                {search.trim() ? "Nenhum pendente com esse nome neste período." : "Todo mundo deste período já pagou."}
               </span>
-            </SemPendentes>
+            </NoPending>
           ) : (
-            pendentes.grupos.map((grupo) => (
-              <GrupoDePendentes
-                key={grupo.chave}
-                grupo={grupo}
-                escolhendo={escolhendo}
-                aoEscolher={setEscolhendo}
-                aoReceber={(pedidoId, pagamentoId) => {
-                  setRecebidos((atual) => new Map(atual).set(pedidoId, pagamentoId));
-                  setEscolhendo(null);
+            pending.groups.map((group) => (
+              <PendingGroup
+                key={group.key}
+                group={group}
+                choosing={choosing}
+                onSelect={setChoosing}
+                onReceive={(orderId, paymentId) => {
+                  setReceived((current) => new Map(current).set(orderId, paymentId));
+                  setChoosing(null);
                 }}
               />
             ))
           )}
         </div>
-      </TrocaSuave>
+      </SmoothSwap>
     </>
   );
 }

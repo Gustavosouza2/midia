@@ -1,19 +1,19 @@
 import Link from "next/link";
-import type { Periodo, ResumoDia } from "@/lib/dashboard";
+import type { Period, DaySummary } from "@/lib/dashboard";
 import { Card, CardAction, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Legenda } from "./legend";
-import { LinhaDoDia } from "./day-row";
+import { Legend } from "./legend";
+import { DayRow } from "./day-row";
 
-export function VendidoPorDia({
-  dias,
-  periodo,
-  aoEscolher,
+export function SoldPerDay({
+  days,
+  period,
+  onSelect,
 }: {
-  dias: ResumoDia[];
-  periodo: Periodo;
-  aoEscolher: (periodo: Periodo) => void;
+  days: DaySummary[];
+  period: Period;
+  onSelect: (period: Period) => void;
 }) {
-  const maiorVendido = Math.max(1, ...dias.map((d) => d.vendido));
+  const maxSold = Math.max(1, ...days.map((d) => d.sold));
 
   return (
     <Card>
@@ -21,25 +21,25 @@ export function VendidoPorDia({
         <CardTitle>Vendido por dia</CardTitle>
         <CardDescription className="hidden tablet:block">Toque em um dia para ver só ele</CardDescription>
         <CardAction>
-          <Legenda />
+          <Legend />
         </CardAction>
       </CardHeader>
-      {dias.length === 0 ? (
+      {days.length === 0 ? (
         <p className="border-t border-border px-3.5 py-6 text-[11px] text-muted-foreground tablet:px-5">
           Nenhum dia de venda ainda.{" "}
-          <Link transitionTypes={["tela"]} href="/vendas" className="text-foreground underline underline-offset-4">
+          <Link transitionTypes={["screen"]} href="/sales" className="text-foreground underline underline-offset-4">
             Criar o primeiro dia em Vendas
           </Link>
         </p>
       ) : (
-        dias.map((d) => (
-          <LinhaDoDia
-            key={d.dia.id}
-            resumo={d}
-            escala={maiorVendido}
-            selecionado={periodo === d.dia.id}
-            apagado={periodo !== "todos" && periodo !== d.dia.id}
-            aoClicar={() => aoEscolher(periodo === d.dia.id ? "todos" : d.dia.id)}
+        days.map((d) => (
+          <DayRow
+            key={d.day.id}
+            summary={d}
+            scale={maxSold}
+            selected={period === d.day.id}
+            dimmed={period !== "all" && period !== d.day.id}
+            onClick={() => onSelect(period === d.day.id ? "all" : d.day.id)}
           />
         ))
       )}

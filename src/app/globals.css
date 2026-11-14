@@ -1,22 +1,22 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 
-/* Tokens do design (design/DESIGN.md): tema claro apenas, preto para ações, verde para dinheiro.
-   Os nomes seguem o vocabulário do shadcn/ui, para que os componentes de src/componentes/ui
-   usem as cores do design sem ajuste. */
+/* Design tokens (design/DESIGN.md): light theme only, black for actions, green for money.
+   Names follow the shadcn/ui vocabulary, so the components in src/components/ui
+   use the design colors without adjustment. */
 @theme {
   --font-sans: "Poppins", ui-sans-serif, system-ui, sans-serif;
 
-  --color-page: #f2f2f3; /* fundo atrás da moldura */
-  --color-background: #ffffff; /* moldura, cards */
-  --color-foreground: #111113; /* texto principal */
-  --color-text-2: #3f3f46; /* texto secundário */
-  --color-muted: #fafafa; /* cabeçalhos de seção, campos, abas */
-  --color-muted-foreground: #6b6b74; /* rótulos, legendas */
-  --color-accent: #f4f4f5; /* hover, contadores */
+  --color-page: #f2f2f3; /* background behind the frame */
+  --color-background: #ffffff; /* frame, cards */
+  --color-foreground: #111113; /* main text */
+  --color-text-2: #3f3f46; /* secondary text */
+  --color-muted: #fafafa; /* section headers, inputs, tabs */
+  --color-muted-foreground: #6b6b74; /* labels, captions */
+  --color-accent: #f4f4f5; /* hover, counters */
   --color-accent-foreground: #111113;
-  --color-border: #ececee; /* bordas e divisórias */
-  --color-input: #e2e2e5; /* bordas de botões e campos */
+  --color-border: #ececee; /* borders and dividers */
+  --color-input: #e2e2e5; /* button and input borders */
   --color-primary: #111113;
   --color-primary-foreground: #ffffff;
   --color-secondary: #f4f4f5;
@@ -26,16 +26,16 @@
   --color-popover: #ffffff;
   --color-popover-foreground: #111113;
   --color-ring: #00716a;
-  --color-ok: #00716a; /* verde (texto): recebido, pago */
-  --color-ok-fill: #359e95; /* verde (preenchimento): barras, switches */
-  --color-ok-soft: #e6f4f2; /* fundo do selo "Pago" */
-  --color-warn: #b4400e; /* laranja: pendente */
-  --color-warn-soft: #fff1e8; /* fundo do selo "Pendente" */
+  --color-ok: #00716a; /* green (text): received, paid */
+  --color-ok-fill: #359e95; /* green (fill): bars, switches */
+  --color-ok-soft: #e6f4f2; /* "Pago" badge background */
+  --color-warn: #b4400e; /* orange: pending */
+  --color-warn-soft: #fff1e8; /* "Pendente" badge background */
   --color-destructive: #b4400e;
   --shadow-float: 0 1px 2px rgba(17, 17, 19, 0.06), 0 8px 24px rgba(17, 17, 19, 0.06);
 
-  /* Pontos de quebra do DESIGN.md. Até 560px vale o layout de celular (barra de abas embaixo);
-     tablet: menu vira barra no topo; desk: menu lateral; wide: números em 4 colunas. */
+  /* DESIGN.md breakpoints. Up to 560px the phone layout applies (tab bar at the bottom);
+     tablet: the menu becomes a top bar; desk: side menu; wide: stats in 4 columns. */
   --breakpoint-tablet: 35.0625rem; /* 561px */
   --breakpoint-desk: 53.8125rem; /* 861px */
   --breakpoint-wide: 73.8125rem; /* 1181px */
@@ -45,8 +45,8 @@ html {
   color-scheme: light;
 }
 
-/* Como no shadcn: borda sem cor explícita usa a cor de divisória. Fica na camada base
-   para que as classes de cor de borda (border-input, border-primary…) continuem valendo. */
+/* As in shadcn: a border without an explicit color uses the divider color. It lives in the base
+   layer so the border color classes (border-input, border-primary…) still apply. */
 @layer base {
   *,
   ::before,
@@ -64,16 +64,16 @@ body {
   font-variant-numeric: tabular-nums;
 }
 
-/* Movimento. Saída rápida, entrada mais suave e depois da saída, para o conteúdo novo
-   não disputar atenção com o velho. */
+/* Motion. Fast exit, softer entrance after the exit, so the new content
+   does not compete for attention with the old. */
 :root {
-  --duracao-saida: 140ms;
-  --duracao-entrada: 220ms;
-  --duracao-movimento: 360ms;
-  --curva-suave: cubic-bezier(0.22, 1, 0.36, 1);
+  --duration-exit: 140ms;
+  --duration-enter: 220ms;
+  --duration-move: 360ms;
+  --ease-smooth: cubic-bezier(0.22, 1, 0.36, 1);
 }
 
-@keyframes aparecer {
+@keyframes fade-in-blur {
   from {
     opacity: 0;
     filter: blur(2px);
@@ -84,7 +84,7 @@ body {
   }
 }
 
-@keyframes subir {
+@keyframes rise {
   from {
     transform: translateY(8px);
   }
@@ -93,7 +93,7 @@ body {
   }
 }
 
-/* A moldura (menu, cabeçalho, barra de abas) fica parada; só o conteúdo da tela anima. */
+/* The frame (menu, header, tab bar) stays still; only the screen content animates. */
 ::view-transition-old(root),
 ::view-transition-new(root) {
   animation: none;
@@ -103,29 +103,29 @@ body {
   pointer-events: none;
 }
 
-/* Trocar de tela pelo menu: o conteúdo velho some e o novo sobe um pouco ao entrar. */
-::view-transition-old(.tela) {
-  animation: var(--duracao-saida) ease-in both aparecer reverse;
+/* Switching screens from the menu: the old content fades out and the new one rises slightly on entry. */
+::view-transition-old(.screen) {
+  animation: var(--duration-exit) ease-in both fade-in-blur reverse;
 }
 
-::view-transition-new(.tela) {
+::view-transition-new(.screen) {
   animation:
-    var(--duracao-entrada) ease-out var(--duracao-saida) both aparecer,
-    var(--duracao-movimento) var(--curva-suave) var(--duracao-saida) both subir;
+    var(--duration-enter) ease-out var(--duration-exit) both fade-in-blur,
+    var(--duration-move) var(--ease-smooth) var(--duration-exit) both rise;
 }
 
-/* Trocar de dia ou período na mesma tela: só um cruzamento suave. */
-::view-transition-group(.troca) {
-  animation-duration: var(--duracao-movimento);
-  animation-timing-function: var(--curva-suave);
+/* Switching day or period on the same screen: just a soft crossfade. */
+::view-transition-group(.swap) {
+  animation-duration: var(--duration-move);
+  animation-timing-function: var(--ease-smooth);
 }
 
-::view-transition-old(.troca) {
-  animation: var(--duracao-saida) ease-in both aparecer reverse;
+::view-transition-old(.swap) {
+  animation: var(--duration-exit) ease-in both fade-in-blur reverse;
 }
 
-::view-transition-new(.troca) {
-  animation: var(--duracao-entrada) ease-out both aparecer;
+::view-transition-new(.swap) {
+  animation: var(--duration-enter) ease-out both fade-in-blur;
 }
 
 @media (prefers-reduced-motion: reduce) {

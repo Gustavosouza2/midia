@@ -6,40 +6,40 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { getLocalDb } from "@/local-db";
-import { definirQuantidadeNoDia } from "@/local-db/writes";
-import { lerQuantidade, type ItemDoCardapio } from "@/lib/menu";
+import { setDayQuantity } from "@/local-db/writes";
+import { parseQuantity, type MenuItem } from "@/lib/menu";
 
-/** "50 · restam 32", "50 · Esgotado" ou "Sem limite", com o lápis para mudar. Vazio = sem limite. */
-export function QuantidadeNoDia({
-  diaId,
+/** "50 · restam 32", "50 · Esgotado" or "Sem limite", with the pencil to change it. Empty = no limit. */
+export function DayQuantity({
+  dayId,
   item,
-  tentar,
-  aoErrar,
+  attempt,
+  onError,
 }: {
-  diaId: string;
-  item: ItemDoCardapio;
-  tentar: (escrita: () => Promise<void>) => Promise<boolean>;
-  aoErrar: (mensagem: string | null) => void;
+  dayId: string;
+  item: MenuItem;
+  attempt: (write: () => Promise<void>) => Promise<boolean>;
+  onError: (message: string | null) => void;
 }) {
-  const { produto, estoque } = item;
-  const [rascunho, setRascunho] = useState<string | null>(null);
+  const { product, stock } = item;
+  const [draft, setDraft] = useState<string | null>(null);
 
-  async function salvar(evento: FormEvent) {
-    evento.preventDefault();
-    const quantidade = lerQuantidade(rascunho ?? "");
-    if (quantidade === undefined) return aoErrar("Quantidade inválida. Use um número inteiro, ou deixe vazio para sem limite.");
-    if (quantidade === estoque.quantidade) return setRascunho(null);
-    if (await tentar(() => definirQuantidadeNoDia(getLocalDb(), diaId, produto.id, quantidade))) setRascunho(null);
+  async function save(event: FormEvent) {
+    event.preventDefault();
+    const quantity = parseQuantity(draft ?? "");
+    if (quantity === undefined) return onError("Quantidade inválida. Use um número inteiro, ou deixe vazio para sem limite.");
+    if (quantity === stock.quantity) return setDraft(null);
+    if (await attempt(() => setDayQuantity(getLocalDb(), dayId, product.id, quantity))) setDraft(null);
   }
 
-  function cancelar() {
-    setRascunho(null);
-    aoErrar(null);
+  function cancel() {
+    setDraft(null);
+    onError(null);
   }
 
-  if (rascunho !== null) {
+  if (draft !== null) {
     return (
-      <form onSubmit={salvar} className="flex items-center gap-2">
+      <form onSubmit={save} className="flex items-center gap-2">
         <Input
           aria-label="Quantidade neste dia"
           autoFocus
@@ -47,9 +47,9 @@ export function QuantidadeNoDia({
           inputMode="numeric"
           autoComplete="off"
           placeholder="Sem limite"
-          value={rascunho}
-          onChange={(e) => setRascunho(e.target.value)}
-          onKeyDown={(e) => e.key === "Escape" && cancelar()}
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          onKeyDown={(e) => e.key === "Escape" && cancel()}
           className="flex-1 bg-background font-semibold wide:h-[30px] wide:w-24 wide:flex-none wide:rounded-[7px]"
         />
         <Button
@@ -62,7 +62,7 @@ export function QuantidadeNoDia({
           type="button"
           variant="ghost"
           aria-label="Cancelar"
-          onClick={cancelar}
+          onClick={cancel}
           className="size-[42px] px-0 text-muted-foreground wide:h-[30px] wide:w-[26px]"
         >
           <X className="size-4" />
@@ -75,25 +75,25 @@ export function QuantidadeNoDia({
     <div className="flex items-center justify-between gap-2.5 wide:justify-start wide:gap-2">
       <div className="flex flex-col leading-tight wide:flex-row wide:items-center wide:gap-2">
         <span className="text-[11px] text-muted-foreground wide:hidden">Quantidade neste dia</span>
-        {estoque.quantidade === null ? (
+        {stock.quantity === null ? (
           <span className="text-sm text-text-2 wide:text-[13px]">Sem limite</span>
         ) : (
           <span className="flex items-center gap-1.5">
-            <strong className="text-lg font-semibold wide:text-[13px]">{estoque.quantidade}</strong>
-            {estoque.esgotado ? (
+            <strong className="text-lg font-semibold wide:text-[13px]">{stock.quantity}</strong>
+            {stock.soldOut ? (
               <Badge variant="warn" className="h-auto rounded-md px-[7px] py-px font-normal">
                 Esgotado
               </Badge>
             ) : (
-              <span className="text-[11px] text-muted-foreground">· restam {estoque.restantes}</span>
+              <span className="text-[11px] text-muted-foreground">· restam {stock.remaining}</span>
             )}
           </span>
         )}
       </div>
       <Button
         variant="outline"
-        aria-label={`Mudar a quantidade de ${produto.nome} neste dia`}
-        onClick={() => setRascunho(estoque.quantidade === null ? "" : String(estoque.quantidade))}
+        aria-label={`Mudar a quantidade de ${product.name} neste dia`}
+        onClick={() => setDraft(stock.quantity === null ? "" : String(stock.quantity))}
         className="h-9 rounded-[9px] wide:size-7 wide:rounded-[7px] wide:px-0 wide:text-text-2"
       >
         <Pencil className="size-3.5 wide:size-[13px]" />

@@ -4,7 +4,7 @@ import * as React from "react";
 import { cn } from "cn";
 import { Switch as SwitchPrimitive } from "radix-ui";
 
-// Switch "À venda / Fora" do Cardápio: ligado em `ok-fill`, desligado em `input`.
+// The Menu's "À venda / Fora" switch: on in `ok-fill`, off in `input`.
 function Switch({ className, ...props }: React.ComponentProps<typeof SwitchPrimitive.Root>) {
   return (
     <SwitchPrimitive.Root

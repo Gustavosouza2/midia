@@ -1,20 +1,20 @@
 import type { ReactNode } from "react";
-import { formatarBRL, iniciais } from "@/lib/format";
-import type { ResumoPedido } from "@/lib/dashboard";
+import { formatBRL, initials } from "@/lib/format";
+import type { OrderSummary } from "@/lib/dashboard";
 
-export function LinhaDePedido({
-  pedido,
+export function OrderRow({
+  order,
   meta,
-  valor,
-  detalhe,
+  amount,
+  detail,
   avatar,
 }: {
-  pedido: ResumoPedido;
+  order: OrderSummary;
   meta: string;
-  valor: number;
-  /** Linha pequena abaixo do valor. */
-  detalhe: ReactNode;
-  /** Classes do quadrado com as iniciais. */
+  amount: number;
+  /** Small line below the amount. */
+  detail: ReactNode;
+  /** Classes of the square with the initials. */
   avatar: string;
 }) {
   return (
@@ -22,15 +22,15 @@ export function LinhaDePedido({
       <span
         className={`flex size-8 flex-none items-center justify-center rounded-lg text-[11px] font-semibold ${avatar}`}
       >
-        {iniciais(pedido.nome)}
+        {initials(order.name)}
       </span>
       <div className="flex min-w-0 flex-1 flex-col leading-[1.3]">
-        <strong className="truncate font-semibold">{pedido.nome}</strong>
+        <strong className="truncate font-semibold">{order.name}</strong>
         <span className="truncate text-[11px] text-muted-foreground">{meta}</span>
       </div>
       <div className="flex flex-col items-end leading-[1.3]">
-        <strong className="font-semibold">{formatarBRL(valor)}</strong>
-        {detalhe}
+        <strong className="font-semibold">{formatBRL(amount)}</strong>
+        {detail}
       </div>
     </div>
   );

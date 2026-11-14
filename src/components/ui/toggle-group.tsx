@@ -5,8 +5,8 @@ import { cn } from "cn";
 import { ToggleGroup as ToggleGroupPrimitive } from "radix-ui";
 import { toggleClasses } from "@/components/ui/toggle";
 
-// Grupo segmentado do DESIGN.md (Venda/Reserva, Pagamento, Cardápio do novo dia): fundo `muted`,
-// borda `input`, 3px de respiro em volta dos segmentos.
+// DESIGN.md segmented group (Venda/Reserva, Pagamento, the new day's Cardápio): `muted` background,
+// `input` border, 3px of padding around the segments.
 function ToggleGroup({ className, ...props }: React.ComponentProps<typeof ToggleGroupPrimitive.Root>) {
   return (
     <ToggleGroupPrimitive.Root
