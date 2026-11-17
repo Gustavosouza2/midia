@@ -27,7 +27,7 @@ export function SoldPerDay({
       {days.length === 0 ? (
         <p className="border-t border-border px-3.5 py-6 text-[11px] text-muted-foreground tablet:px-5">
           Nenhum dia de venda ainda.{" "}
-          <Link transitionTypes={["screen"]} href="/sales" className="text-foreground underline underline-offset-4">
+          <Link transitionTypes={["screen"]} href="/" className="text-foreground underline underline-offset-4">
             Criar o primeiro dia em Vendas
           </Link>
         </p>

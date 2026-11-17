@@ -14,6 +14,7 @@ import {
   refundPayment,
   recordPayment,
   placeOrder,
+  cancelOrder,
   removeDay,
   type NewOrder,
 } from "./writes";
@@ -210,14 +211,16 @@ describe("day menu", () => {
   });
 });
 
-function order(dayId: string, productId: string, change: Partial<NewOrder> = {}): NewOrder {
+function order(
+  dayId: string,
+  productId: string,
+  { quantity = 3, ...change }: Partial<NewOrder> & { quantity?: number } = {},
+): NewOrder {
   return {
     dayId,
     customerName: "Melina",
     type: "sale",
-    productId,
-    quantity: 3,
-    unitPriceCents: 1000,
+    items: [{ productId, quantity, unitPriceCents: 1000 }],
     payment: "pending",
     ...change,
   };
@@ -318,6 +321,48 @@ describe("orders and payments", () => {
     const id = await placeOrder(db, order(dayId, beef, { quantity: 3 }));
     await db.orders.update(id, { status: "cancelado" });
 
+    await placeOrder(db, order(dayId, beef, { quantity: 3 }));
+  });
+
+  it("one order holds several items, merging repeats of the same product", async () => {
+    const soda = await product("Refri", 600);
+    const id = await placeOrder(db, {
+      ...order(dayId, beef, { payment: "pix" }),
+      items: [
+        { productId: beef, quantity: 1, unitPriceCents: 1000 },
+        { productId: soda, quantity: 2, unitPriceCents: 600 },
+        { productId: beef, quantity: 1, unitPriceCents: 1000 },
+      ],
+    });
+
+    const items = await db.orderItems.where("orderId").equals(id).toArray();
+    expect(items.map((i) => [i.productId, i.quantity]).sort()).toEqual([[beef, 2], [soda, 2]].sort());
+    expect(await db.payments.where("orderId").equals(id).toArray()).toMatchObject([{ amountCents: 3200 }]);
+  });
+
+  it("refuses an empty order", async () => {
+    await expectRejection(placeOrder(db, { ...order(dayId, beef), items: [] }), "empty-order");
+  });
+
+  it("only a sale paid on the spot can go without a name", async () => {
+    await placeOrder(db, order(dayId, beef, { customerName: " ", payment: "pix" }));
+    await expectRejection(placeOrder(db, order(dayId, beef, { customerName: "" })), "name-required");
+    await expectRejection(
+      placeOrder(db, order(dayId, beef, { customerName: "", type: "reservation", payment: "pix" })),
+      "name-required",
+    );
+    expect(await db.customers.count()).toBe(0);
+  });
+
+  it("canceling an order refunds its payments and gives the stock back", async () => {
+    await setDayQuantity(db, dayId, beef, 3);
+    const id = await placeOrder(db, order(dayId, beef, { payment: "pix" }));
+
+    await cancelOrder(db, id);
+    await cancelOrder(db, id);
+
+    expect((await db.orders.get(id))?.status).toBe("cancelado");
+    expect((await db.payments.where("orderId").equals(id).toArray()).every((p) => p.refundedAt)).toBe(true);
     await placeOrder(db, order(dayId, beef, { quantity: 3 }));
   });
 

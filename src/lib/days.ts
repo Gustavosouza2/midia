@@ -50,3 +50,9 @@ export function groupByMonth(days: SaleDay[]): [string, SaleDay[]][] {
   }
   return [...groups];
 }
+
+/** Menu for a day opened in one tap: a copy of the latest day before `date`, else of any day, else the defaults. */
+export function menuToCopy(days: SaleDay[], date: string): { type: "copy"; dayId: string } | { type: "default" } {
+  const source = days.find((d) => d.date < date) ?? days[0];
+  return source ? { type: "copy", dayId: source.id } : { type: "default" };
+}

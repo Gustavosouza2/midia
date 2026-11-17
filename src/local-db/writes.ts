@@ -26,6 +26,8 @@ const MESSAGES = {
   "not-found": "Registro não encontrado no aparelho.",
   "invalid-value": "Valor inválido.",
   "out-of-stock": "Não há quantidade suficiente deste item.",
+  "empty-order": "Escolha pelo menos um item.",
+  "name-required": "Escreva o nome de quem vai pagar depois ou buscar a reserva.",
 } as const;
 
 export type WriteErrorCode = keyof typeof MESSAGES;
@@ -247,24 +249,33 @@ export async function setOnMenu(db: CanteenLocalDb, dayId: string, productId: st
   await updateDayMenuItem(db, dayId, productId, (current) => ({ ...current, active: forSale }));
 }
 
+export type OrderLine = { productId: string; quantity: number; unitPriceCents: number };
+
 export type NewOrder = {
   dayId: string;
-  /** Finds the customer by name (ignoring case and spaces) or creates a new one. Empty = no customer. */
+  /**
+   * Finds the customer by name (ignoring case and spaces) or creates a new one. Empty = no customer,
+   * which only a sale paid on the spot allows: someone has to be charged or handed the reservation later.
+   */
   customerName: string;
   /** A sale is born delivered; a reservation is born "recebido" and is delivered later. */
   type: "sale" | "reservation";
-  productId: string;
-  quantity: number;
-  unitPriceCents: number;
+  /** One line per product; the same product twice is merged. */
+  items: OrderLine[];
   /** Pix or cash records the payment of the total together with the order. */
   payment: "pending" | PaymentMethod;
 };
 
-/** Records a sale or reservation of one item. Returns the order id. */
+/** Records a sale or reservation with one or more items. Returns the order id. */
 export async function placeOrder(db: CanteenLocalDb, order: NewOrder): Promise<string> {
-  requireCents(order.unitPriceCents);
-  if (!Number.isInteger(order.quantity) || order.quantity <= 0) throw new WriteError("invalid-value");
+  const lines = mergeLines(order.items);
+  if (lines.length === 0) throw new WriteError("empty-order");
+  for (const line of lines) {
+    requireCents(line.unitPriceCents);
+    if (!Number.isInteger(line.quantity) || line.quantity <= 0) throw new WriteError("invalid-value");
+  }
   const name = collapseSpaces(order.customerName);
+  if (!name && (order.payment === "pending" || order.type === "reservation")) throw new WriteError("name-required");
   const key = name.toLocaleLowerCase("pt-BR");
 
   return transaction(db, async () => {
@@ -272,7 +283,7 @@ export async function placeOrder(db: CanteenLocalDb, order: NewOrder): Promise<s
     if (day.canceledAt) throw new WriteError("not-found");
     const canteenId = day.canteenId;
     const now = new Date().toISOString();
-    await requireStock(db, day.id, order.productId, order.quantity);
+    for (const line of lines) await requireStock(db, day.id, line.productId, line.quantity);
 
     let customerId: string | null = null;
     if (name) {
@@ -297,23 +308,34 @@ export async function placeOrder(db: CanteenLocalDb, order: NewOrder): Promise<s
       createdAt: now,
       deliveredAt: sale ? now : null,
     });
-    await saveRow(db, "orderItems", {
-      id: crypto.randomUUID(),
-      orderId,
-      canteenId,
-      productId: order.productId,
-      quantity: order.quantity,
-      unitPriceCents: order.unitPriceCents,
-      canceledAt: null,
-    });
+    for (const line of lines) {
+      await saveRow(db, "orderItems", {
+        id: crypto.randomUUID(),
+        orderId,
+        canteenId,
+        productId: line.productId,
+        quantity: line.quantity,
+        unitPriceCents: line.unitPriceCents,
+        canceledAt: null,
+      });
+    }
 
-    const total = order.quantity * order.unitPriceCents;
+    const total = lines.reduce((sum, line) => sum + line.quantity * line.unitPriceCents, 0);
     if (order.payment !== "pending" && total > 0) {
       // Same instant as the order: that is how a payment at sale time is told apart from one received later.
       await savePayment(db, { orderId, canteenId, amountCents: total, method: order.payment }, now);
     }
     return orderId;
   });
+}
+
+function mergeLines(lines: OrderLine[]): OrderLine[] {
+  const byProduct = new Map<string, OrderLine>();
+  for (const line of lines) {
+    const existing = byProduct.get(line.productId);
+    byProduct.set(line.productId, existing ? { ...existing, quantity: existing.quantity + line.quantity } : line);
+  }
+  return [...byProduct.values()];
 }
 
 /** Refuses ordering more than what remains of the item on the day. Reservations also consume stock. */
@@ -378,5 +400,21 @@ export async function refundPayment(db: CanteenLocalDb, paymentId: string): Prom
     const payment = await mustExist(db.payments.get(paymentId));
     if (payment.refundedAt) return;
     await saveRow(db, "payments", { ...payment, refundedAt: new Date().toISOString() });
+  });
+}
+
+/**
+ * Undoes an order just placed by mistake: status "cancelado" and its payments refunded, so the day's
+ * stock and totals go back to what they were. Nothing is deleted.
+ */
+export async function cancelOrder(db: CanteenLocalDb, orderId: string): Promise<void> {
+  await transaction(db, async () => {
+    const order = await mustExist(db.orders.get(orderId));
+    if (order.status === "cancelado") return;
+    await saveRow(db, "orders", { ...order, status: "cancelado" });
+    const now = new Date().toISOString();
+    for (const payment of await db.payments.where("orderId").equals(orderId).toArray()) {
+      if (!payment.refundedAt) await saveRow(db, "payments", { ...payment, refundedAt: now });
+    }
   });
 }

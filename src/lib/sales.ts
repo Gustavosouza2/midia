@@ -17,8 +17,6 @@ export type SalesData = {
 export type OrderStatus = "reserved" | "pending" | "paid";
 export type StatusFilter = "all" | OrderStatus;
 
-export const PAGE_SIZE = 6;
-
 export type MenuItem = {
   productId: string;
   name: string;
@@ -48,8 +46,6 @@ export type DayOrder = {
   time: string;
 };
 
-export type BoardColumn = { status: OrderStatus; orders: DayOrder[]; total: number };
-
 export type SalesScreen = {
   /** Items for sale on the day, by name. */
   menu: MenuItem[];
@@ -68,8 +64,8 @@ export type SalesScreen = {
   dayTotal: number;
   /** Orders with the search and filter applied, newest first. */
   orders: DayOrder[];
-  /** Board: Reservas → Pendentes → Pagos, with only the search applied. */
-  board: BoardColumn[];
+  /** How many orders each filter shows, with the search applied. */
+  counts: Record<StatusFilter, number>;
 };
 
 /**
@@ -116,7 +112,10 @@ export function buildSales(
       return {
         id: p.id,
         name: (p.customerId && customerById.get(p.customerId)?.name) || "Sem nome",
-        description: items.map((i) => `${i.quantity}× ${productById.get(i.productId)?.name ?? "Item"}`).join(", "),
+        description: items
+          .map((i) => `${i.quantity}× ${productById.get(i.productId)?.name ?? "Item"}`)
+          .sort((a, b) => a.replace(/^\d+× /, "").localeCompare(b.replace(/^\d+× /, ""), "pt-BR"))
+          .join(", "),
         quantity: sumBy(items, (i) => i.quantity),
         amount,
         unitPrice: items.length === 1 ? items[0].unitPriceCents : null,
@@ -137,10 +136,7 @@ export function buildSales(
 
   const term = normalize(search);
   const matching = term ? all.filter((p) => normalize(p.name).includes(term)) : all;
-  const board = (["reserved", "pending", "paid"] as const).map((status): BoardColumn => {
-    const orders = matching.filter((p) => p.status === status);
-    return { status, orders, total: sumBy(orders, (p) => (status === "pending" ? p.due : p.amount)) };
-  });
+  const count = (status: OrderStatus) => matching.filter((p) => p.status === status).length;
 
   return {
     menu,
@@ -156,44 +152,8 @@ export function buildSales(
     },
     dayTotal: all.length,
     orders: filter === "all" ? matching : matching.filter((p) => p.status === filter),
-    board,
+    counts: { all: matching.length, reserved: count("reserved"), pending: count("pending"), paid: count("paid") },
   };
-}
-
-export type Paged<T> = {
-  items: T[];
-  /** Current page, clamped between 1 and the total. */
-  page: number;
-  totalPages: number;
-  /** "Mostrando 1–6 de 12". */
-  range: string;
-};
-
-export function paginate<T>(list: T[], page: number, perPage = PAGE_SIZE): Paged<T> {
-  const totalPages = Math.max(1, Math.ceil(list.length / perPage));
-  const current = Math.min(Math.max(1, page), totalPages);
-  const start = (current - 1) * perPage;
-  const items = list.slice(start, start + perPage);
-  return {
-    items,
-    page: current,
-    totalPages,
-    range: list.length ? `Mostrando ${start + 1}–${start + items.length} de ${list.length}` : "Nenhum pedido",
-  };
-}
-
-/** "12" or "12,50", for the Preço un. input. */
-export function formatPriceInput(cents: number): string {
-  const reais = Math.floor(cents / 100);
-  const remainder = cents % 100;
-  return remainder ? `${reais},${String(remainder).padStart(2, "0")}` : String(reais);
-}
-
-/** Reads what was typed in Preço un. ("12", "12,5", "12.50"). Invalid = null. */
-export function parsePrice(text: string): number | null {
-  const clean = text.trim().replace(",", ".");
-  if (!/^\d+(\.\d{0,2})?$/.test(clean)) return null;
-  return Math.round(Number(clean) * 100);
 }
 
 const METHOD_LABEL: Record<PaymentMethod, string> = { pix: "Pix", dinheiro: "Dinheiro" };

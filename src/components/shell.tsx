@@ -21,10 +21,10 @@ type NavItem = {
 };
 
 const MENU: NavItem[] = [
-  { href: "/", label: "Painel", Icon: DashboardIcon },
-  { href: "/sales", label: "Vendas", Icon: SalesIcon },
+  { href: "/", label: "Vendas", Icon: SalesIcon },
   { href: "/pending", label: "Pendentes", Icon: PendingIcon },
   { href: "/menu", label: "Cardápio", Icon: MenuIcon },
+  { href: "/dashboard", label: "Painel", Icon: DashboardIcon },
 ];
 
 /**
@@ -111,14 +111,23 @@ export function Shell({ children }: { children: ReactNode }) {
           className="fixed inset-x-0 bottom-0 z-10 grid grid-cols-4 border-t border-border bg-background px-1.5 pt-1.5 pb-[calc(14px+env(safe-area-inset-bottom))] tablet:hidden"
         >
           {MENU.map((item) => {
+            const badgeCount = item.href === "/pending" && pending ? pending : null;
             const content = (active: boolean) => (
               <>
                 <span
-                  className={`flex h-7 w-11 items-center justify-center rounded-[9px] transition-colors duration-200 ${
+                  className={`relative flex h-7 w-11 items-center justify-center rounded-[9px] transition-colors duration-200 ${
                     active ? "bg-primary text-primary-foreground" : ""
                   }`}
                 >
                   <item.Icon size={16} />
+                  {badgeCount && (
+                    <span
+                      aria-label={`${badgeCount} em aberto`}
+                      className="absolute -top-1 right-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-warn px-1 text-[9px] font-semibold text-white tabular-nums"
+                    >
+                      {badgeCount}
+                    </span>
+                  )}
                 </span>
                 {item.label}
               </>

@@ -5,7 +5,7 @@ import type { DayOrder } from "@/lib/sales";
 import { OrderCards } from "./order-cards";
 import { OrderTable } from "./order-table";
 
-/** Tablet and desktop: table paginated 6 at a time. Phone: cards with "Carregar mais". */
+/** Tablet and desktop: a table. Phone: cards. Both scroll with the page. */
 export function OrderList({ orders, emptyMessage }: { orders: DayOrder[]; emptyMessage: string }) {
   if (orders.length === 0) {
     return <Card className="px-5 py-7 text-center text-xs text-muted-foreground">{emptyMessage}</Card>;

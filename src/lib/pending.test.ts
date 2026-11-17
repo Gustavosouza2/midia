@@ -92,35 +92,71 @@ function example() {
 }
 
 describe("buildPending", () => {
-  it("splits the groups by age and sums the stats as in the prototype", () => {
+  it("lists one entry per person, who owes longest first, with the prototype's totals", () => {
     const { data } = example();
-    const { stats, groups } = buildPending(data, ALL, TODAY);
+    const { stats, people } = buildPending(data, ALL, TODAY);
 
     expect(stats).toEqual({
       outstanding: 3000 + 1000 + 1000 + 2400 + 2400 + 1200 + 1200,
-      outstandingOrders: 7,
       people: 7,
       overduePeople: 3,
-      overdueAmount: 5000,
-      receivedNow: 0,
     });
-    expect(groups.map((g) => [g.title, g.people, g.total])).toEqual([
-      ["Há mais de 2 semanas", 3, 5000],
-      ["Recentes", 4, 7200],
+    expect(people.map((p) => [p.name, p.amount, p.ageDays])).toEqual([
+      ["Melina", 3000, 17],
+      ["Aniello", 1000, 17],
+      ["Maju", 1000, 17],
+      ["Elizete", 2400, 3],
+      ["Fernando", 2400, 3],
+      ["Angélica", 1200, 3],
+      ["Lorrayne", 1200, 3],
     ]);
-    expect(groups[0].rows[0]).toEqual({
-      orderId: expect.any(String),
+    expect(people[0]).toEqual({
+      key: expect.any(String),
       name: "Melina",
-      description: "3× Espeto de carne · 18 out",
       ageDays: 17,
       amount: 3000,
+      orders: [
+        {
+          orderId: expect.any(String),
+          items: "3× Espeto de carne",
+          day: "18 out",
+          ageDays: 17,
+          amount: 3000,
+          state: { type: "open" },
+        },
+      ],
       state: { type: "open" },
     });
   });
 
+  it("groups the orders of the same person under one entry, oldest order first", () => {
+    const { data, nov01, order } = example();
+    order(nov01, "Melina", 1, 1200);
+
+    const { stats, people } = buildPending(data, ALL, TODAY);
+    const melina = people.filter((p) => p.name === "Melina");
+    expect(melina).toHaveLength(1);
+    expect(melina[0].amount).toBe(4200);
+    expect(melina[0].ageDays).toBe(17);
+    expect(melina[0].orders.map((o) => [o.day, o.amount])).toEqual([
+      ["18 out", 3000],
+      ["01 nov", 1200],
+    ]);
+    expect(stats.people).toBe(7);
+    expect(stats.outstanding).toBe(13400);
+  });
+
+  it("keeps sales with no name apart", () => {
+    const { data, nov01, order } = example();
+    for (const p of [order(nov01, "x", 1, 1200), order(nov01, "x", 1, 1200)]) p.customerId = null;
+
+    const anonymous = buildPending(data, ALL, TODAY).people.filter((p) => p.name === "Sem nome");
+    expect(anonymous.map((p) => p.orders.length)).toEqual([1, 1]);
+  });
+
   it("does not show reservations or paid orders", () => {
     const { data } = example();
-    const names = buildPending(data, ALL, TODAY).groups.flatMap((g) => g.rows.map((l) => l.name));
+    const names = buildPending(data, ALL, TODAY).people.map((p) => p.name);
 
     expect(names).not.toContain("Gustavo");
     expect(names).not.toContain("Charlene");
@@ -131,71 +167,77 @@ describe("buildPending", () => {
     pay(melina, 1000, todayAt(10));
     pay(elizete, 2400, todayAt(11), { refundedAt: todayAt(12) });
 
-    const rows = buildPending(data, ALL, TODAY).groups.flatMap((g) => g.rows);
-    expect(rows.find((l) => l.name === "Melina")?.amount).toBe(2000);
-    expect(rows.find((l) => l.name === "Elizete")?.amount).toBe(2400);
+    const { people } = buildPending(data, ALL, TODAY);
+    expect(people.find((p) => p.name === "Melina")?.amount).toBe(2000);
+    expect(people.find((p) => p.name === "Elizete")?.amount).toBe(2400);
   });
 
-  it("counts the same person only once", () => {
-    const { data, nov01, order } = example();
+  it("counts as overdue only people with an open order older than 2 weeks", () => {
+    const { data, melina, nov01, order, pay } = example();
     order(nov01, "Melina", 1, 1200);
+    pay(melina, 3000, todayAt(10));
 
-    const { stats, groups } = buildPending(data, ALL, TODAY);
-    expect(stats.outstandingOrders).toBe(8);
-    expect(stats.people).toBe(7);
-    expect(groups[1].people).toBe(5);
+    const { stats, people } = buildPending(data, ALL, TODAY);
+    expect(stats.overduePeople).toBe(2);
+    expect(people.find((p) => p.name === "Melina")?.amount).toBe(1200);
   });
 
   it("filters by day and searches by name ignoring accents and case", () => {
     const { data, oct18 } = example();
 
     const ofDay = buildPending(data, { period: oct18.id, search: "" }, TODAY);
-    expect(ofDay.groups.map((g) => g.key)).toEqual(["old"]);
+    expect(ofDay.people.map((p) => p.name)).toEqual(["Melina", "Aniello", "Maju"]);
     expect(ofDay.stats.outstanding).toBe(5000);
 
     const removed = buildPending(data, { period: "dia-que-nao-existe", search: "" }, TODAY);
     expect(removed.period).toBe("all");
-    expect(removed.stats.outstandingOrders).toBe(7);
+    expect(removed.stats.people).toBe(7);
 
     const search = buildPending(data, { period: "all", search: "  ANGELICA " }, TODAY);
-    expect(search.groups.flatMap((g) => g.rows.map((l) => l.name))).toEqual(["Angélica"]);
+    expect(search.people.map((p) => p.name)).toEqual(["Angélica"]);
     expect(search.stats.outstanding).toBe(1200);
   });
 
-  it("Recebido agora sums what was received today from people who were pending", () => {
-    const { data, melina, elizete, oct18, nov01, order, pay } = example();
-    pay(melina, 3000, todayAt(10));
-    pay(elizete, 2400, todayAt(11), { refundedAt: todayAt(12) });
-    pay(order(nov01, "Ontem", 1, 1200), 1200, new Date(2026, 10, 3, 12).toISOString());
-    // Sale made today and already paid: the payment is recorded with the order.
-    const paidSale = order(nov01, "Na hora", 1, 1200);
-    paidSale.createdAt = todayAt(9);
-    pay(paidSale, 1200, paidSale.createdAt);
-
-    expect(buildPending(data, ALL, TODAY).stats.receivedNow).toBe(3000);
-    expect(buildPending(data, { period: nov01.id, search: "" }, TODAY).stats.receivedNow).toBe(0);
-    expect(buildPending(data, { period: oct18.id, search: "mel" }, TODAY).stats.receivedNow).toBe(3000);
-  });
-
-  it("keeps the order received in the session as paid until the payment is refunded", () => {
+  it("keeps the person received in the session as paid until the payment is refunded", () => {
     const { data, melina, pay } = example();
     const payment = pay(melina, 3000, todayAt(10), { method: "dinheiro" });
     const inSession = new Map([[melina.id, payment.id]]);
 
     const paid = buildPending(data, ALL, TODAY, inSession);
-    expect(paid.groups[0].rows[0]).toMatchObject({
+    expect(paid.people[0]).toMatchObject({
       name: "Melina",
       amount: 3000,
-      state: { type: "paid", paymentId: payment.id, method: "dinheiro" },
+      state: { type: "paid", paymentIds: [payment.id], method: "dinheiro" },
     });
-    expect(paid.groups[0].people).toBe(2);
-    expect(paid.stats.outstanding).toBe(2000 + 7200);
-    // Without the session (screen reloaded), the paid order leaves the list.
-    expect(buildPending(data, ALL, TODAY).groups[0].rows.map((l) => l.name)).not.toContain("Melina");
+    expect(paid.people[0].orders[0].state).toEqual({ type: "paid", paymentId: payment.id, method: "dinheiro" });
+    expect(paid.stats).toEqual({ outstanding: 2000 + 7200, people: 6, overduePeople: 2 });
+    // Without the session (screen reloaded), the paid person leaves the list.
+    expect(buildPending(data, ALL, TODAY).people.map((p) => p.name)).not.toContain("Melina");
 
     payment.refundedAt = todayAt(11);
     const undone = buildPending(data, ALL, TODAY, inSession);
-    expect(undone.groups[0].rows[0]).toMatchObject({ name: "Melina", amount: 3000, state: { type: "open" } });
+    expect(undone.people[0]).toMatchObject({ name: "Melina", amount: 3000, state: { type: "open" } });
+  });
+
+  it("keeps the person open while one of their orders is still due", () => {
+    const { data, melina, nov01, order, pay } = example();
+    const second = order(nov01, "Melina", 1, 1200);
+    const first = pay(melina, 3000, todayAt(10));
+
+    const partly = buildPending(data, ALL, TODAY, new Map([[melina.id, first.id]]));
+    expect(partly.people[0]).toMatchObject({ name: "Melina", amount: 1200, state: { type: "open" } });
+    expect(partly.people[0].orders.map((o) => o.state.type)).toEqual(["paid", "open"]);
+
+    const last = pay(second, 1200, todayAt(11), { method: "dinheiro" });
+    const all = new Map([
+      [melina.id, first.id],
+      [second.id, last.id],
+    ]);
+    expect(buildPending(data, ALL, TODAY, all).people[0]).toMatchObject({
+      name: "Melina",
+      amount: 4200,
+      state: { type: "paid", paymentIds: [first.id, last.id], method: null },
+    });
   });
 
   it("ignores canceled orders and removed days", () => {
@@ -205,22 +247,19 @@ describe("buildPending", () => {
     data.days.push(removed);
     order(removed, "Fantasma", 1, 1200);
 
-    const { stats, days } = buildPending(data, ALL, TODAY);
-    expect(stats.outstandingOrders).toBe(7);
+    const { people, days } = buildPending(data, ALL, TODAY);
+    expect(people.map((p) => p.name)).not.toContain("Cancelado");
+    expect(people.map((p) => p.name)).not.toContain("Fantasma");
     expect(days.map((d) => d.date)).not.toContain("2026-11-02");
   });
 
   it("works with no data", () => {
-    const emptyMessage: PendingData = { days: [], orders: [], items: [], payments: [], products: [], customers: [] };
-    const { stats, groups } = buildPending(emptyMessage, ALL, TODAY);
-    expect(stats).toEqual({
-      outstanding: 0,
-      outstandingOrders: 0,
-      people: 0,
-      overduePeople: 0,
-      overdueAmount: 0,
-      receivedNow: 0,
+    const empty: PendingData = { days: [], orders: [], items: [], payments: [], products: [], customers: [] };
+    expect(buildPending(empty, ALL, TODAY)).toEqual({
+      days: [],
+      period: "all",
+      stats: { outstanding: 0, people: 0, overduePeople: 0 },
+      people: [],
     });
-    expect(groups).toEqual([]);
   });
 });

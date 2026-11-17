@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import type { OrderItem, Order, DayMenuItem, Product } from "@/local-db";
-import { parseQuantity, parseReais, buildMenu, formatReaisInput, type MenuData } from "./menu";
+import type { OrderItem, Order, DayMenuItem, Product, SaleDay } from "@/local-db";
+import { parseQuantity, parseReais, buildMenu, formatReaisInput, menuDay, type MenuData } from "./menu";
 
 const CANTEEN = "c0000000-0000-4000-8000-000000000000";
 const DAY = "d0000000-0000-4000-8000-000000000001";
@@ -164,5 +164,35 @@ describe("formatReaisInput", () => {
     expect(formatReaisInput(1200)).toBe("12");
     expect(formatReaisInput(1250)).toBe("12,50");
     expect(formatReaisInput(1205)).toBe("12,05");
+  });
+});
+
+describe("menuDay", () => {
+  const day = (date: string): SaleDay => ({
+    id: date,
+    canteenId: CANTEEN,
+    date,
+    name: null,
+    closedAt: null,
+    canceledAt: null,
+    ...sync,
+  });
+  const days = [day("2026-11-22"), day("2026-11-15"), day("2026-11-08")];
+
+  it("shows the picked day", () => {
+    expect(menuDay(days, "2026-11-15", "2026-11-08")?.date).toBe("2026-11-08");
+  });
+
+  it("with nothing picked, shows today's day", () => {
+    expect(menuDay(days, "2026-11-15", null)?.date).toBe("2026-11-15");
+  });
+
+  it("with nothing picked and no day today, shows none instead of the upcoming or latest day", () => {
+    expect(menuDay(days, "2026-11-17", null)).toBeNull();
+    expect(menuDay([], "2026-11-17", null)).toBeNull();
+  });
+
+  it("a picked day that was removed falls back to today's", () => {
+    expect(menuDay(days, "2026-11-15", "gone")?.date).toBe("2026-11-15");
   });
 });

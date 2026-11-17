@@ -1,8 +1,8 @@
 import { expect, test } from "@playwright/test";
 
-test("the home page opens straight on the Dashboard", async ({ page }) => {
+test("the home page opens straight on Sales", async ({ page }) => {
   await page.goto("/");
-  await expect(page.getByRole("heading", { name: "Painel da Cantina" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Vendas" })).toBeVisible();
 });
 
 test("after one visit, the home page opens without internet", async ({ page, context }) => {
@@ -20,5 +20,5 @@ test("after one visit, the home page opens without internet", async ({ page, con
 
   await context.setOffline(true);
   await page.reload();
-  await expect(page.getByRole("heading", { name: "Painel da Cantina" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Vendas" })).toBeVisible();
 });

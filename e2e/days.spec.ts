@@ -16,7 +16,7 @@ test("when the app opens, the server's canteen goes into the local database", as
   };
   await page.route("**/api/canteen", (route) => route.fulfill({ json: { canteen } }));
 
-  await page.goto("/");
+  await page.goto("/dashboard");
   // The title only appears after the first read, so the local database already exists.
   await expect(page.getByRole("heading", { name: "Painel da Cantina" })).toBeVisible();
 
@@ -26,7 +26,7 @@ test("when the app opens, the server's canteen goes into the local database", as
 test("without the canteen on the server, the app opens all the same", async ({ page }) => {
   await page.route("**/api/canteen", (route) => route.fulfill({ status: 500, json: { error: "server down" } }));
 
-  await page.goto("/");
+  await page.goto("/dashboard");
 
   await expect(page.getByRole("heading", { name: "Painel da Cantina" })).toBeVisible();
   expect(await readTable(page, "canteens")).toEqual([]);
@@ -38,8 +38,8 @@ const TODAY = date(0);
 
 // What each screen shows after the first read of the local database (still without days).
 const READY: Record<string, (page: Page) => Locator> = {
-  "/": (page) => page.getByRole("heading", { name: "Painel da Cantina" }),
-  "/sales": (page) => page.getByText("Cadastre os itens no Cardápio"),
+  "/dashboard": (page) => page.getByRole("heading", { name: "Painel da Cantina" }),
+  "/": (page) => page.getByText("Cadastre os itens no Cardápio"),
   "/menu": (page) => page.getByText("Nenhum item no cardápio ainda"),
   "/pending": (page) => page.getByRole("link", { name: "Criar o primeiro dia em Vendas" }),
 };
@@ -61,8 +61,8 @@ test.describe("day filter on the phone", () => {
   test.use({ viewport: { width: 390, height: 844 } });
 
   test("with 30 days, nothing overflows the screen width", async ({ page }) => {
-    await openWithThirtyDays(page, "/");
-    for (const route of ["/", "/sales", "/pending", "/menu"]) {
+    await openWithThirtyDays(page, "/dashboard");
+    for (const route of ["/dashboard", "/", "/pending", "/menu"]) {
       await page.goto(route);
       await expect(page.getByRole("group", { name: /^(Período|Dia de venda)$/ }).locator('[aria-haspopup="dialog"]')).toBeVisible();
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), route).toBe(true);
@@ -70,7 +70,7 @@ test.describe("day filter on the phone", () => {
   });
 
   test("opens on today and the list rises in a sheet grouped by month", async ({ page }) => {
-    await openWithThirtyDays(page, "/sales");
+    await openWithThirtyDays(page, "/");
     const filter = dayFilter(page);
     await expect(filter.trigger).toContainText(filterLabel(TODAY));
     await expect(filter.trigger).toContainText("hoje");
@@ -93,7 +93,7 @@ test.describe("day filter on the phone", () => {
 });
 
 test("the arrows move between days and stop at the ends", async ({ page }) => {
-  await openWithThirtyDays(page, "/sales");
+  await openWithThirtyDays(page, "/");
   const filter = dayFilter(page);
   await expect(filter.trigger).toContainText(filterLabel(TODAY));
 
@@ -111,7 +111,7 @@ test("the arrows move between days and stop at the ends", async ({ page }) => {
 });
 
 test("on desktop, the list opens in a popover grouped by month and closes on selection", async ({ page }) => {
-  await openWithThirtyDays(page, "/sales");
+  await openWithThirtyDays(page, "/");
   const filter = dayFilter(page);
 
   await filter.trigger.click();
@@ -125,7 +125,7 @@ test("on desktop, the list opens in a popover grouped by month and closes on sel
 });
 
 test("in Sales, \"Novo dia de venda\" at the end of the list creates a day", async ({ page }) => {
-  await openWithThirtyDays(page, "/sales");
+  await openWithThirtyDays(page, "/");
   const filter = dayFilter(page);
 
   await filter.trigger.click();
@@ -139,7 +139,7 @@ test("in Sales, \"Novo dia de venda\" at the end of the list creates a day", asy
 });
 
 test("on the Dashboard, \"Todos os dias\" hides the arrows", async ({ page }) => {
-  await openWithThirtyDays(page, "/");
+  await openWithThirtyDays(page, "/dashboard");
   const filter = dayFilter(page, "Período");
 
   await expect(filter.trigger).toHaveText("Todos os dias");

@@ -6,7 +6,8 @@ the inline styles to copy the look, but build with the project's components (Nex
 The data inside them is sample data and must not be copied into the app.
 
 Some decisions came after the prototypes (payment in Sales, creating a sale day).
-**Where this document and a prototype disagree, this document wins.**
+**Where this document and a prototype disagree, this document wins.** The v2 UX refactor (fewer
+taps, Sales as the home screen) changed Sales, Pending and Menu; the prototypes predate it.
 
 The UI is in Portuguese, so labels, button text and messages are quoted here exactly as the user sees
 them.
@@ -71,10 +72,11 @@ Short and meaningful; everything turns off with `prefers-reduced-motion`. Timing
 - **Frame (desktop):** `page` background with 16px padding; inside, a white panel with a border and
   a 14px radius.
 - **Side menu (232px):** brand (black square with a skewer icon + "Cantina / Mídia · Casa do Pai"),
-  "Principal" label, links Painel, Vendas, Pendentes (with a counter), Cardápio. Active item: black
-  background, white text. No search and no settings. **No user card (v1 has no login):** the menu
+  "Principal" label, links Vendas, Pendentes (with a counter, also on the phone tab bar), Cardápio,
+  Painel: the main task first. Active item: black background, white text. No search and no settings. **No user card (v1 has no login):** the menu
   footer shows only "Equipe de mídia · Casa do Pai", with no name and no initials.
-- **Page top:** breadcrumb with the page name on the left; on the right, the main action.
+- **Page top:** the page title (with the day written out) on the left; on the right, the day filter
+  or the main action. No breadcrumb: the menu already says where you are.
   No notification bell (desktop and phone).
 - **Day filter:** `‹ [📅 Dom, 15 nov · hoje · name ▾] ›`, the same on all four screens. The middle
   button shows the selected day and opens the day list; the arrows move one day. Phone: 44px tall,
@@ -104,49 +106,44 @@ Short and meaningful; everything turns off with `prefers-reduced-motion`. Timing
 5. "Precisa de atenção": reservations to deliver and the 3 oldest pending orders, with a link to
    Pending.
 
-**Sales (Vendas)**
-1. Title, the day written out, a link to the Menu and the day filter (see "Sale days").
-2. Single-row form: Venda/Reserva, Quem, Item (from the day's menu), Qtd, Preço un.
-   (comes from the menu and can be changed for this sale only), **Pagamento: Pendente | Pix | Dinheiro**
-   (segmented, default Pendente; replaces the prototype's Pago/Pendente), and the button
-   "Registrar · R$ X" or "Reservar · R$ X". Pix or Dinheiro records the payment together with the
-   sale.
-   - An item with a quantity on the day shows what remains: "Espeto de carne · R$ 12 · restam 5".
-     A sold-out item stays in the list, disabled, with "esgotado". The Qtd "+" stops at what remains.
-   - If another order sells the item out before submitting, the error shows in `warn` below the
-     form: "Só restam 3 de Espeto de carne." or "Espeto de carne esgotou."
-3. The day's stat strip: Itens vendidos, Recebido, Pendente, Reservas.
-4. "Pedidos do dia": customer search, Todos/Reservas/Pendentes/Pagos filter and Lista/Quadro view.
-   The board has 3 columns: Reservas → Pendentes → Pagos.
-5. Changing the payment later, in the list or on the board, follows the Pending pattern:
-   - the "Pendente" badge or the "Marcar pago" button opens the **Pix · Dinheiro · ×** choice in its
-     place;
-   - the "Pago" badge shows the method ("Pago · Pix") and, when tapped, offers "Desfazer" (refunds
-     the payment); on the board, "Desfazer" in the Pagos column does the same.
+**Sales (Vendas)**: the home screen (`/`), built like a shop counter.
+1. Title, the day written out and the day filter. It opens on today's sale day. When today has no
+   day, the card "Vendas de hoje ainda não abertas" has one button, "Abrir vendas de hoje", which
+   creates today's day copying the latest day's menu (or every item at its default price on the
+   first day). Other dates stay in the day filter's "+ Novo dia de venda".
+2. "Toque para adicionar": the day's items as large tiles (name, price, "restam N" / "esgotado").
+   Each tap adds one unit to the order; the tile shows how many are in it and stops at what remains.
+   "Editar cardápio do dia" links to the Menu.
+3. The order panel ("Pedido"): beside the tiles on desktop; on phone and tablet a black bar
+   ("2 itens · R$ 20 · Cobrar") opens it in a bottom sheet. It has Venda | Reserva, the lines with
+   − / + , "Nome" (suggests known customers), the total and three buttons: **Pix**, **Dinheiro**,
+   **Pendente**. The payment button records the order; there is no separate submit. A name is
+   required only for Pendente and for reservations ("Escreva o nome de quem vai pagar depois.").
+4. After recording, a confirmation ("Venda registrada · R$ 32 no Pix") offers **Desfazer** for six
+   seconds: the order is canceled (`status = cancelado`, payments refunded) and the items go back to
+   the order panel.
+5. "Resumo do dia" in one compact row: Vendido, Recebido, Pendente, Reservas.
+6. "Pedidos do dia": customer search and Todos / Pendentes / Reservas / Pagos with counts. No board
+   view and no pagination. Each order has one action, one tap: Pendente → **Pix** / **Dinheiro**;
+   Pago → **Desfazer**; Reservado → **Entregar**.
 
 **Pending (Pendentes)**
-Day filter with "Todos os dias", search, stat strip (Em aberto, Pessoas, Há mais de 2 semanas,
-Recebido agora) and the groups "Há mais de 2 semanas" and "Recentes". "Receber" asks for the method:
-Pix or Dinheiro; then it shows "Pago via Pix" with Desfazer.
+Day filter with "Todos os dias", a "Resumo" (Em aberto, Pessoas, Há mais de 2 semanas) and a
+full-width "Buscar pessoa pelo nome". One entry per person, whoever owes longest first, with the
+total and an age badge (orange after 2 weeks). **Pix** / **Dinheiro** beside the person pay all of
+their open orders in one tap; then "Pago via Pix" with Desfazer. A person with several orders also
+lists them, each with its own smaller Pix / Dinheiro.
 
 **Menu (Cardápio)**
-The Menu comes before the day: items are registered here, with or without a sale day, and then each
-day chooses which ones it sells and how many it has of each.
-- "Adicionar item" (name + default price) always works. With a day open, the new item goes on sale
-  there right away. After "Salvar item" the form stays open, cleared and with focus on the name, with
-  the confirmation "Pastel entrou no cardápio." in `ok`, so several can be registered in a row.
-  "Cancelar" (which becomes "Fechar" after the first saved item) closes it.
-- Without a sale day: the items appear under "Itens cadastrados", with the default price (see
-  "First use").
-- With a day: the day filter and the item list with the price on this day (editable with the pencil;
-  a badge when it differs from the default), **the quantity on this day**, units sold that day and the
-  "À venda / Fora" switch for that day's menu. Desktop: a table with the columns Item, Preço neste
-  dia, Quantidade, Vendidos, No cardápio do dia. Phone: a card with the price and quantity below the
-  name, only when for sale.
-- Quantity: "50 · restam 32"; "2" with the "Esgotado" badge (`warn`) when nothing remains; or
-  "Sem limite". The pencil swaps the text for a numeric input, like the price: Enter saves, Esc
-  cancels, empty = no limit. Changing the quantity neither adds the item to nor removes it from the
-  day's menu.
+The Menu comes before the day: items are registered here, and each day chooses which ones it sells,
+at what price and how many.
+- A "Novo item · R$ · Adicionar" row at the top of the list. Enter adds, the item goes on sale on the
+  selected day, "Pastel entrou no cardápio." shows in `ok` and the cursor returns to the name.
+- Each row: name, **price on this day** and **quantity** as plain inputs (blur or Enter saves, Esc
+  reverts, empty quantity = "Sem limite"), "restam N" / "Esgotado", units sold and the "À venda /
+  Fora" switch. "padrão R$ X" appears only when the day's price differs from the default.
+- It opens on today's day. Without one, "Abrir vendas de hoje" (one tap); other days through the
+  day filter. With no day at all, the items appear under "Itens cadastrados".
 
 ## Sale days
 
