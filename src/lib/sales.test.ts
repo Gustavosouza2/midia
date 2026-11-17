@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { Customer, OrderItem, Payment, Order, DayMenuItem, Product } from "@/local-db";
-import { parsePrice, buildSales, paginate, paidLabel, formatPriceInput, type SalesData } from "./sales";
+import { buildSales, paidLabel, type SalesData } from "./sales";
 
 const CANTEEN = "c0000000-0000-4000-8000-000000000000";
 const DAY = "d0000000-0000-4000-8000-000000000001";
@@ -139,12 +139,12 @@ describe("buildSales", () => {
     expect(dayTotal).toBe(4);
   });
 
-  it("describes the order with name, items, unit price and local time", () => {
+  it("describes the order with name, items by name, unit price and local time", () => {
     const b = fixtures();
     const skewer = b.product("Espeto", 1200);
     const soda = b.product("Refri", 600);
     const one = b.order("Ana", [[skewer, 2, 1100]], { createdAt: at(20, 5) });
-    const two = b.order(null, [[skewer, 1, 1200], [soda, 2, 600]], { createdAt: at(9, 30) });
+    const two = b.order(null, [[soda, 2, 600], [skewer, 1, 1200]], { createdAt: at(9, 30) });
     const reservation = b.order("Bia", [[skewer, 1, 1200]], { reservation: true, createdAt: at(10, 0, 8) });
 
     const byId = new Map(buildSales(b.data, DAY).orders.map((p) => [p.id, p]));
@@ -195,7 +195,7 @@ describe("buildSales", () => {
     expect(names("ana", "paid")).toEqual([]);
   });
 
-  it("builds the board with the search, without the status filter, and sums what is left on pending orders", () => {
+  it("counts the orders under each filter, with the search applied", () => {
     const b = fixtures();
     const skewer = b.product("Espeto", 1000);
     const partial = b.order("Ana", [[skewer, 2, 1000]]);
@@ -204,14 +204,8 @@ describe("buildSales", () => {
     b.pay(paid.id, 1000);
     b.order("Caio", [[skewer, 3, 1000]], { reservation: true });
 
-    const board = buildSales(b.data, DAY, { filter: "paid" }).board;
-
-    expect(board.map((c) => [c.status, c.orders.length, c.total])).toEqual([
-      ["reserved", 1, 3000],
-      ["pending", 1, 1500],
-      ["paid", 1, 1000],
-    ]);
-    expect(buildSales(b.data, DAY, { search: "bia" }).board.map((c) => c.orders.length)).toEqual([0, 0, 1]);
+    expect(buildSales(b.data, DAY, { filter: "paid" }).counts).toEqual({ all: 3, reserved: 1, pending: 1, paid: 1 });
+    expect(buildSales(b.data, DAY, { search: "bia" }).counts).toEqual({ all: 1, reserved: 0, pending: 0, paid: 1 });
   });
 
   it("the day's menu has only items for sale, at the day price, by name", () => {
@@ -246,40 +240,6 @@ describe("buildSales", () => {
       ["Espeto", 2],
       ["Refri", 0],
     ]);
-  });
-});
-
-describe("paginate", () => {
-  const list = Array.from({ length: 13 }, (_, i) => i + 1);
-
-  it("slices 6 at a time and describes the range", () => {
-    expect(paginate(list, 1)).toEqual({ items: [1, 2, 3, 4, 5, 6], page: 1, totalPages: 3, range: "Mostrando 1–6 de 13" });
-    expect(paginate(list, 3)).toMatchObject({ items: [13], range: "Mostrando 13–13 de 13" });
-  });
-
-  it("clamps the page to the valid range", () => {
-    expect(paginate(list, 9).page).toBe(3);
-    expect(paginate(list, 0).page).toBe(1);
-    expect(paginate([], 1)).toEqual({ items: [], page: 1, totalPages: 1, range: "Nenhum pedido" });
-  });
-});
-
-describe("typed price", () => {
-  it("reads reais with comma or dot into cents", () => {
-    expect(parsePrice("12")).toBe(1200);
-    expect(parsePrice(" 12,5 ")).toBe(1250);
-    expect(parsePrice("12.05")).toBe(1205);
-    expect(parsePrice("0")).toBe(0);
-  });
-
-  it("refuses what is not an amount", () => {
-    for (const text of ["", "abc", "-3", "1,234", "1.2.3"]) expect(parsePrice(text)).toBeNull();
-  });
-
-  it("writes the menu price into the input", () => {
-    expect(formatPriceInput(1200)).toBe("12");
-    expect(formatPriceInput(1250)).toBe("12,50");
-    expect(formatPriceInput(5)).toBe("0,05");
   });
 });
 

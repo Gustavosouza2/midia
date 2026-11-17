@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { SaleDay } from "@/local-db";
-import { groupByMonth, newDayDate, initialDay, activeDays, dayTag, neighbors } from "./days";
+import { groupByMonth, newDayDate, initialDay, activeDays, dayTag, neighbors, menuToCopy } from "./days";
 
 function day(date: string, canceledAt: string | null = null): SaleDay {
   return {
@@ -105,5 +105,14 @@ describe("groupByMonth", () => {
       ["Outubro de 2026", ["2026-10-25", "2026-10-11"]],
       ["Setembro de 2026", ["2026-09-27"]],
     ]);
+  });
+});
+
+describe("menuToCopy", () => {
+  it("copies the latest day before the date, else any day, else uses the default prices", () => {
+    const days = activeDays([day("2026-11-01"), day("2026-11-08"), day("2026-11-22")]);
+    expect(menuToCopy(days, "2026-11-15")).toEqual({ type: "copy", dayId: "2026-11-08" });
+    expect(menuToCopy(activeDays([day("2026-11-22")]), "2026-11-15")).toEqual({ type: "copy", dayId: "2026-11-22" });
+    expect(menuToCopy([], "2026-11-15")).toEqual({ type: "default" });
   });
 });

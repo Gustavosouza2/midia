@@ -1,13 +1,13 @@
 import type { Metadata } from "next";
 import { ScreenTransition } from "@/components/transitions/screen-transition";
-import { Dashboard } from "@/components/dashboard/dashboard";
+import { Sales } from "@/components/sales/sales";
 
-export const metadata: Metadata = { title: "Painel · Cantina da Mídia" };
+export const metadata: Metadata = { title: "Vendas · Cantina da Mídia" };
 
-export default function DashboardPage() {
+export default function SalesPage() {
   return (
     <ScreenTransition>
-      <Dashboard />
+      <Sales />
     </ScreenTransition>
   );
 }

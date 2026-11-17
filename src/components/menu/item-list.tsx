@@ -4,6 +4,7 @@ import { longDate } from "@/lib/format";
 import { RemoveDay } from "../day/remove-day";
 import { COLUMNS } from "./columns";
 import { ItemRow } from "./item-row";
+import { NewItem } from "./new-item";
 
 /** Up to 1180px: one card per item (two per row from tablet up). Above: a table inside a card. */
 export function ItemList({ day, menu }: { day: SaleDay; menu: Menu }) {
@@ -15,34 +16,28 @@ export function ItemList({ day, menu }: { day: SaleDay; menu: Menu }) {
       aria-label="Itens do cardápio"
       className="flex flex-col gap-2.5 wide:gap-0 wide:overflow-hidden wide:rounded-xl wide:border wide:border-border wide:bg-card"
     >
-      <div className="flex flex-wrap items-center justify-between gap-x-2.5 gap-y-1 wide:px-5 wide:py-4">
-        <div className="flex flex-col gap-0.5">
-          <div className="flex flex-wrap items-baseline gap-x-2.5">
-            <h2 className="text-sm font-semibold">
-              Itens em {longLabel[0].toLowerCase()}
-              {longLabel.slice(1)}
-            </h2>
-            <RemoveDay day={day} />
-          </div>
-          <span className="text-[11px] text-muted-foreground">
-            Mudar um preço vale para as próximas vendas deste dia. Vendas já feitas mantêm o preço delas.
-            Quantidade vazia é sem limite; vendas e reservas descontam dela.
-          </span>
+      <div className="flex flex-wrap items-baseline justify-between gap-x-2.5 gap-y-1 wide:px-5 wide:pt-4 wide:pb-3">
+        <div className="flex flex-wrap items-baseline gap-x-2.5">
+          <h2 className="text-sm font-semibold">
+            Itens em {longLabel[0].toLowerCase()}
+            {longLabel.slice(1)}
+          </h2>
+          <RemoveDay day={day} />
         </div>
         <span className="text-[11px] text-muted-foreground">
           {menu.forSale} de {total} {total === 1 ? "item" : "itens"} à venda
         </span>
       </div>
 
-      {total === 0 ? (
-        <p className="rounded-xl border border-border bg-card px-3.5 py-4 text-[11px] text-muted-foreground wide:rounded-none wide:border-x-0 wide:border-b-0 wide:px-5">
-          Nenhum item no cardápio ainda. Use “Adicionar item” para cadastrar o primeiro.
-        </p>
-      ) : (
+      <div className="rounded-xl border border-border bg-card p-3.5 wide:rounded-none wide:border-x-0 wide:border-b-0 wide:bg-transparent wide:px-5 wide:py-3">
+        <NewItem dayId={day.id} />
+      </div>
+
+      {total > 0 && (
         <>
           <div
             aria-hidden="true"
-            className={`hidden gap-4 bg-muted px-5 py-2.5 text-[11px] text-muted-foreground wide:grid ${COLUMNS}`}
+            className={`hidden gap-4 border-t border-border bg-muted px-5 py-2.5 text-[11px] text-muted-foreground wide:grid ${COLUMNS}`}
           >
             <span>Item</span>
             <span>Preço neste dia</span>

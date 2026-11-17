@@ -15,6 +15,8 @@ const eslintConfig = defineConfig([
   globalIgnores([
     // Default ignores of eslint-config-next:
     ".next/**",
+    // Agent worktrees are full checkouts of other branches.
+    ".claude/**",
     "out/**",
     "build/**",
     "next-env.d.ts",

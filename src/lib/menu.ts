@@ -1,4 +1,4 @@
-import type { OrderItem, Order, DayMenuItem, Product } from "@/local-db";
+import type { OrderItem, Order, DayMenuItem, Product, SaleDay } from "@/local-db";
 import { dayStock, type Stock } from "./stock";
 
 /** Everything the Menu reads from the local database. */
@@ -46,6 +46,14 @@ export function buildMenu(data: MenuData, dayId: string): Menu {
     });
 
   return { items, forSale: items.filter((i) => i.forSale).length };
+}
+
+/**
+ * Day the Menu shows: the one picked in the day filter, else today's. Null when today has no sale day and
+ * nothing was picked: the screen offers to open today instead of showing another day. `days` from activeDays().
+ */
+export function menuDay(days: SaleDay[], today: string, pickedId: string | null): SaleDay | null {
+  return days.find((d) => d.id === pickedId) ?? days.find((d) => d.date === today) ?? null;
 }
 
 /** "12", "12,5", "12,50" or "R$ 12,50" → cents. Null if it is not an amount in reais above zero. */

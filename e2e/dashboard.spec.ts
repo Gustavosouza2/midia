@@ -3,7 +3,7 @@ import { date, writeLocalDb, id, row } from "./local-db";
 import { dayFilter, filterLabel } from "./day-filter";
 
 test("the Dashboard shows the stats from the local database", async ({ page }) => {
-  await page.goto("/");
+  await page.goto("/dashboard");
   // The title only appears after the first read, so the local database already exists.
   await expect(page.getByRole("heading", { name: "Painel da Cantina" })).toBeVisible();
 
@@ -40,8 +40,8 @@ test("the Dashboard shows the stats from the local database", async ({ page }) =
   await expect(page.getByText("nenhuma neste período")).toBeVisible();
 });
 
-test("the menu counts pending orders and the Dashboard links to Pending and Sales", async ({ page }) => {
-  await page.goto("/");
+test("the menu counts pending orders and the Dashboard links to Pending", async ({ page }) => {
+  await page.goto("/dashboard");
   await expect(page.getByRole("heading", { name: "Painel da Cantina" })).toBeVisible();
   await writeLocalDb(page, {
     products: [row.product(1, "Espeto de carne", 1000)],
@@ -59,7 +59,6 @@ test("the menu counts pending orders and the Dashboard links to Pending and Sale
   await expect(page).toHaveURL(/\/pending$/);
   await expect(page.getByText("Melina")).toBeVisible();
 
-  await menu.getByRole("link", { name: "Painel" }).click();
-  await page.getByRole("link", { name: "Nova venda" }).click();
-  await expect(page).toHaveURL(/\/sales$/);
+  await menu.getByRole("link", { name: "Vendas" }).click();
+  await expect(page.getByRole("heading", { name: "Vendas", exact: true })).toBeVisible();
 });

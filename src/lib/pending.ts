@@ -1,6 +1,6 @@
 import type { SaleDay, Payment, Order } from "@/local-db";
 import { activeDays } from "./days";
-import { localDate, daysBetween, shortDate } from "./format";
+import { daysBetween, shortDate } from "./format";
 import { OLD_PENDING_DAYS, type DashboardData, type Period } from "./dashboard";
 
 /** Pending reads the same tables as the Dashboard. */
@@ -8,55 +8,53 @@ export type PendingData = DashboardData;
 
 export type PaymentMethod = Payment["method"];
 
-export type RowState =
-  | { type: "open" }
-  /** Received in this session: stays in the list with "Desfazer" until the screen is reloaded. */
-  | { type: "paid"; paymentId: string; method: PaymentMethod };
+/** Received in this session: stays in the list with "Desfazer" until the screen is reloaded. */
+export type OrderState = { type: "open" } | { type: "paid"; paymentId: string; method: PaymentMethod };
 
-export type PendingRow = {
+export type PendingOrder = {
   orderId: string;
-  name: string;
-  /** "2× Espeto de carne · 01 nov" */
-  description: string;
+  /** "2× Espeto de carne, 1× Refri" */
+  items: string;
+  /** "01 nov" */
+  day: string;
   ageDays: number;
-  /** Outstanding, or the received amount when the row is paid. */
+  /** Outstanding, or the received amount when the order is paid. */
   amount: number;
-  state: RowState;
+  state: OrderState;
 };
 
-export type PendingGroupData = {
-  key: "old" | "recent";
-  title: string;
-  rows: PendingRow[];
-  /** People and total from the rows still outstanding only. */
-  people: number;
-  total: number;
+/** Every order of the person was received in this session. `method` is null when they were mixed. */
+export type PersonState =
+  | { type: "open" }
+  | { type: "paid"; paymentIds: string[]; method: PaymentMethod | null };
+
+export type PendingPerson = {
+  /** Customer id, or the order id for a sale with no name. */
+  key: string;
+  name: string;
+  /** Age of the oldest order shown. */
+  ageDays: number;
+  /** Sum of the open orders, or what was received when the person is paid. */
+  amount: number;
+  /** Oldest first. */
+  orders: PendingOrder[];
+  state: PersonState;
 };
 
 export type Pending = {
   days: SaleDay[];
   /** The requested period, or "all" if the selected day no longer exists. */
   period: Period;
-  stats: {
-    outstanding: number;
-    outstandingOrders: number;
-    people: number;
-    overduePeople: number;
-    overdueAmount: number;
-    receivedNow: number;
-  };
-  /** Only groups with some row, "Há mais de 2 semanas" before "Recentes". */
-  groups: PendingGroupData[];
+  /** From the orders still open only. */
+  stats: { outstanding: number; people: number; overduePeople: number };
+  /** Who owes longest first. */
+  people: PendingPerson[];
 };
 
 /**
  * Builds the Pending screen: sold orders (not reservations) with an outstanding amount, in the period and
- * matching the searched name. `receivedInSession` (order → payment) keeps in the list, as paid,
- * the orders received in this session while the payment is not refunded.
- *
- * "Recebido agora" sums the non-refunded payments recorded today (the device's local
- * date) on orders that were already pending: the payment made with the
- * sale (recorded at the same instant as the order) is left out.
+ * matching the searched name, one entry per person. `receivedInSession` (order → payment) keeps in the
+ * list, as paid, the orders received in this session while the payment is not refunded.
  */
 export function buildPending(
   data: PendingData,
@@ -82,23 +80,17 @@ export function buildPending(
       normalize(nameOf(p)).includes(term),
   );
 
-  const rows: { row: PendingRow; person: string; total: number }[] = [];
-  let receivedNow = 0;
+  const byPerson = new Map<string, { name: string; orders: PendingOrder[]; total: number }>();
   for (const order of orders) {
     const items = data.items.filter((i) => i.orderId === order.id && !i.canceledAt);
-    const payments = data.payments.filter((p) => p.orderId === order.id && !p.refundedAt);
     const total = items.reduce((sum, i) => sum + i.quantity * i.unitPriceCents, 0);
-    const paid = payments.reduce((sum, p) => sum + p.amountCents, 0);
+    const paid = data.payments
+      .filter((p) => p.orderId === order.id && !p.refundedAt)
+      .reduce((sum, p) => sum + p.amountCents, 0);
     const due = Math.max(0, total - paid);
 
-    for (const p of payments) {
-      // The payment made with the sale has the same instant as the order (placeOrder).
-      const afterSale = p.recordedAt > order.createdAt;
-      if (afterSale && localDate(p.recordedAt) === today) receivedNow += p.amountCents;
-    }
-
     const received = paymentById.get(receivedInSession.get(order.id) ?? "");
-    let state: RowState;
+    let state: OrderState;
     let amount: number;
     if (due > 0) {
       state = { type: "open" };
@@ -111,57 +103,65 @@ export function buildPending(
     }
 
     const day = dayById.get(order.dayId)!;
-    const description = items
-      .map((i) => `${i.quantity}× ${productById.get(i.productId)?.name ?? "Item"}`)
-      .join(", ");
-    rows.push({
-      row: {
-        orderId: order.id,
-        name: nameOf(order),
-        description: `${description} · ${shortDate(day.date)}`,
-        ageDays: Math.max(0, daysBetween(day.date, today)),
-        amount,
-        state,
-      },
-      person: order.customerId ?? order.id,
-      total,
+    const key = order.customerId ?? order.id;
+    const person = byPerson.get(key) ?? { name: nameOf(order), orders: [], total: 0 };
+    person.orders.push({
+      orderId: order.id,
+      items: items.map((i) => `${i.quantity}× ${productById.get(i.productId)?.name ?? "Item"}`).join(", "),
+      day: shortDate(day.date),
+      ageDays: Math.max(0, daysBetween(day.date, today)),
+      amount,
+      state,
     });
+    // The orders' full totals (not the outstanding amount) break ties, so a person does not jump when paid.
+    person.total += total;
+    byPerson.set(key, person);
   }
 
-  // The order's total amount (not the outstanding one) breaks ties, so the row does not jump when paid.
-  rows.sort(
+  const people = [...byPerson].map(([key, { name, orders, total }]) => {
+    orders.sort((a, b) => b.ageDays - a.ageDays || a.orderId.localeCompare(b.orderId));
+    const open = orders.filter((o) => o.state.type === "open");
+    return {
+      total,
+      overdue: open.some((o) => o.ageDays >= OLD_PENDING_DAYS),
+      person: {
+        key,
+        name,
+        ageDays: orders[0].ageDays,
+        amount: sumAmounts(open.length > 0 ? open : orders),
+        orders,
+        state: open.length > 0 ? { type: "open" } : paidState(orders),
+      } satisfies PendingPerson,
+    };
+  });
+  people.sort(
     (a, b) =>
-      b.row.ageDays - a.row.ageDays || b.total - a.total || a.row.orderId.localeCompare(b.row.orderId),
+      b.person.ageDays - a.person.ageDays ||
+      b.total - a.total ||
+      a.person.name.localeCompare(b.person.name, "pt-BR") ||
+      a.person.key.localeCompare(b.person.key),
   );
 
-  const outstanding = rows.filter((l) => l.row.state.type === "open");
-  const oldRows = outstanding.filter((l) => l.row.ageDays >= OLD_PENDING_DAYS);
-  const group = (key: PendingGroupData["key"], title: string, old: boolean): PendingGroupData => {
-    const inGroup = rows.filter((l) => l.row.ageDays >= OLD_PENDING_DAYS === old);
-    const openRows = inGroup.filter((l) => l.row.state.type === "open");
-    return {
-      key,
-      title,
-      rows: inGroup.map((l) => l.row),
-      people: countPeople(openRows),
-      total: sumBy(openRows),
-    };
-  };
-
+  const owing = people.filter((p) => p.person.state.type === "open");
   return {
     days,
     period,
     stats: {
-      outstanding: sumBy(outstanding),
-      outstandingOrders: outstanding.length,
-      people: countPeople(outstanding),
-      overduePeople: countPeople(oldRows),
-      overdueAmount: sumBy(oldRows),
-      receivedNow,
+      outstanding: sumAmounts(owing.map((p) => p.person)),
+      people: owing.length,
+      overduePeople: owing.filter((p) => p.overdue).length,
     },
-    groups: [group("old", "Há mais de 2 semanas", true), group("recent", "Recentes", false)].filter(
-      (g) => g.rows.length > 0,
-    ),
+    people: people.map((p) => p.person),
+  };
+}
+
+function paidState(orders: PendingOrder[]): PersonState {
+  const payments = orders.flatMap((o) => (o.state.type === "paid" ? [o.state] : []));
+  const methods = new Set(payments.map((p) => p.method));
+  return {
+    type: "paid",
+    paymentIds: payments.map((p) => p.paymentId),
+    method: methods.size === 1 ? payments[0].method : null,
   };
 }
 
@@ -170,10 +170,6 @@ function normalize(text: string): string {
   return text.normalize("NFD").replace(/\p{Diacritic}/gu, "").toLocaleLowerCase("pt-BR").trim();
 }
 
-function sumBy(rows: { row: PendingRow }[]): number {
-  return rows.reduce((sum, l) => sum + l.row.amount, 0);
-}
-
-function countPeople(rows: { person: string }[]): number {
-  return new Set(rows.map((l) => l.person)).size;
+function sumAmounts(rows: { amount: number }[]): number {
+  return rows.reduce((sum, r) => sum + r.amount, 0);
 }

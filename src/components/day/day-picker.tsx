@@ -17,7 +17,8 @@ export function DayPicker({
 }: {
   days: SaleDay[];
   today: string;
-  dayId: string;
+  /** Null while no day is selected (Sales and Menu before today's day is opened). */
+  dayId: string | null;
   onSelect: (dayId: string) => void;
 }) {
   const [newOpen, setNewOpen] = useState(false);
@@ -28,7 +29,7 @@ export function DayPicker({
         <DayFilter
           days={days}
           today={today}
-          value={dayId}
+          value={dayId ?? ""}
           onSelect={onSelect}
           label="Dia de venda"
           onNewDay={() => setNewOpen(true)}

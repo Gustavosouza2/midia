@@ -1,18 +1,16 @@
 "use client";
 
 import { Search } from "lucide-react";
-import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { plural } from "@/lib/format";
 import type { StatusFilter, SalesScreen } from "@/lib/sales";
 import { OrderList } from "./order-list";
-import { OrderBoard } from "./order-board";
 
 const FILTERS: [StatusFilter, string][] = [
   ["all", "Todos"],
-  ["reserved", "Reservas"],
   ["pending", "Pendentes"],
+  ["reserved", "Reservas"],
   ["paid", "Pagos"],
 ];
 
@@ -29,9 +27,7 @@ export function DayOrders({
   filter: StatusFilter;
   onFilter: (filter: StatusFilter) => void;
 }) {
-  const [view, setView] = useState<"list" | "board">("list");
-  const list = view === "list";
-  const count = list ? screen.orders.length : screen.board.reduce((sum, c) => sum + c.orders.length, 0);
+  const count = screen.orders.length;
 
   const emptyMessage = search.trim()
     ? "Ninguém com esse nome neste dia."
@@ -64,31 +60,20 @@ export function DayOrders({
               className="bg-background pl-8 tablet:h-9"
             />
           </div>
-          {list && (
-            <Tabs value={filter} onValueChange={(v) => onFilter(v as StatusFilter)}>
-              <TabsList aria-label="Status">
-                {FILTERS.map(([value, label]) => (
-                  <TabsTrigger key={value} value={value}>
-                    {label}
-                  </TabsTrigger>
-                ))}
-              </TabsList>
-            </Tabs>
-          )}
-          <Tabs value={view} onValueChange={(v) => setView(v as typeof view)} className="hidden tablet:block">
-            <TabsList aria-label="Visualização">
-              <TabsTrigger value="list">Lista</TabsTrigger>
-              <TabsTrigger value="board">Quadro</TabsTrigger>
+          <Tabs value={filter} onValueChange={(v) => onFilter(v as StatusFilter)}>
+            <TabsList aria-label="Status">
+              {FILTERS.map(([value, label]) => (
+                <TabsTrigger key={value} value={value} aria-label={label}>
+                  {label}
+                  <span className="ml-1 tabular-nums opacity-60">{screen.counts[value]}</span>
+                </TabsTrigger>
+              ))}
             </TabsList>
           </Tabs>
         </div>
       </div>
 
-      {list ? (
-        <OrderList key={`${filter}|${search}`} orders={screen.orders} emptyMessage={emptyMessage} />
-      ) : (
-        <OrderBoard columns={screen.board} />
-      )}
+      <OrderList key={`${filter}|${search}`} orders={screen.orders} emptyMessage={emptyMessage} />
     </section>
   );
 }

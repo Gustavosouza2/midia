@@ -74,7 +74,7 @@ every push.
 ```
 src/
   app/                 pages and routes (App Router)
-    (app)/             screens: / (Dashboard), /sales, /pending, /menu
+    (app)/             screens: / (Sales), /pending, /menu, /dashboard
     api/health/        GET /api/health → { ok: true }
     api/canteen/       GET /api/canteen (this deploy's canteen, downloaded by the app)
     api/products/      GET /api/products

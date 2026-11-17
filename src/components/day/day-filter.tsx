@@ -39,6 +39,7 @@ export function DayFilter({
   /** Sales and Menu: "+ Novo dia de venda" at the bottom of the list. */
   onNewDay?: () => void;
 }) {
+  const emptyLabel = all ? "Todos os dias" : "Escolher outro dia";
   const tablet = useTablet();
   const [open, setOpen] = useState(false);
   // When the list is swapped for "Novo dia", focus does not return to the trigger: that would close the form that just opened.
@@ -104,7 +105,7 @@ export function DayFilter({
               {day ? (
                 <DayLabel day={day} tag={dayTag(day, days, today)} />
               ) : (
-                <span className="font-medium">Todos os dias</span>
+                <span className="font-medium">{emptyLabel}</span>
               )}
             </span>
             <ChevronDown aria-hidden="true" className="size-4 text-muted-foreground tablet:size-3.5" />
